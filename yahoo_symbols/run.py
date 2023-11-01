@@ -1,9 +1,7 @@
 import datetime as dt
 import os
 from itertools import product
-from string import ascii_lowercase, digits
 
-import msgspec
 from loguru import logger
 from pydala.dataset import ParquetDataset
 from pydala.filesystem import FileSystem
@@ -11,32 +9,11 @@ from pydala.helpers.polars_ext import pl
 from yfin.quote_summary import quote_summary_async
 from yfin.quotes import quotes_async
 from yfin.symbols import lookup_search_async, validate_async
+from .constants import TYPES, SAMPLES
 
-from .settings import SETTINGS
 from .utils import AsyncTyper, repeat_until_completed
 
 app = AsyncTyper()
-
-if SETTINGS.storage.type.lower() == "s3":
-    FS = FileSystem(
-        protocol="s3",
-        key=SETTINGS.storage.s3.key,
-        secret=SETTINGS.storage.s3.secret,
-        endpoint_url=SETTINGS.storage.s3.endpoint_url,
-        profile=SETTINGS.storage.s3.profile,
-        bucket=SETTINGS.storage.s3.bucket,
-    )
-
-elif SETTINGS.storage.type.lower() == "local":
-    FS = FileSystem(
-        protocol="file",
-        bucket=SETTINGS.storage.local.bucket,
-    )
-
-else:
-    FS = None
-
-DOWNLOAD_ARGS = msgspec.structs.asdict(SETTINGS.parameters.download)
 
 
 async def get_lookup(
@@ -87,7 +64,7 @@ async def get_lookup(
         return res
 
 
-async def get_quote_summary(symbols: list[str], *args, **kwargs):
+async def get_quote_summary(symbols: list[str], *args, **kwargs)->tuple[pl.DataFrame, pl.DataFrame]:
     """
     Retrieves summary profile and quote type information for a list of symbols.
 
@@ -97,7 +74,7 @@ async def get_quote_summary(symbols: list[str], *args, **kwargs):
         **kwargs: Arbitrary keyword arguments.
 
     Returns:
-        Tuple: A tuple containing two pandas.DataFrame objects, one for summary profile and one for quote type information.
+        Tuple[pl.DataFrame, pl.DataFrame]: A tuple containing two pandas.DataFrame objects, one for summary profile and one for quote type information.
     """
     res = await repeat_until_completed(
         func=quote_summary_async,
@@ -157,23 +134,22 @@ async def get_quote_summary(symbols: list[str], *args, **kwargs):
     return summary_profile, quote_type
 
 
-async def get_quotes(symbols: list[str], chunk_size: int = 750, *args, **kwargs):
+async def get_quotes(symbols: list[str], *args, **kwargs)->pl.DataFrame:
     """
     Retrieves quotes for a list of symbols from Yahoo Finance.
 
     Args:
         symbols (list[str]): A list of symbols to retrieve quotes for.
-        chunk_size (int, optional): The number of symbols to retrieve quotes for at a time. Defaults to 750.
         *args: Additional arguments to pass to the `quotes_async` function.
         **kwargs: Additional keyword arguments to pass to the `quotes_async` function.
 
     Returns:
-        A polars DataFrame containing the retrieved quotes.
+        pl.DataFrame: A polars DataFrame containing the retrieved quotes.
     """
     quotes = await repeat_until_completed(
         func=quotes_async,
         symbols=symbols,
-        chunk_size=chunk_size,
+        chunk_size=500,
         fields=["twoHundredDayAverageChangePercent", "currency"],
         *args,
         **kwargs,
@@ -216,23 +192,36 @@ async def get_quotes(symbols: list[str], chunk_size: int = 750, *args, **kwargs)
 
 
 @app.command()
-async def get_all(
+async def download(
     lookup_queries: str,  # | list[str],
     type_: str,
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = "default",
+    s3_bucket: str  = None,
+    **download_args,
 ):
     """
-    Retrieves data for a given set of lookup queries and type.
+    Downloads data from a specified source based on the given lookup queries and type.
 
     Args:
-        lookup_queries (str | list[str]): The lookup queries to retrieve data for.
-        type_ (str): The type of data to retrieve.
+        lookup_queries (str | list[str]): The lookup queries used to retrieve the data.
+        type_ (str): The type of data to download.
+        storage_path (str, optional): The path where the downloaded data will be stored. Defaults to "yahoo-symbols".
+        storage_type (str, optional): The type of storage to use. Valid options are: "s3", "local" or "sqlite".
+            Defaults to "s3".
+        s3_profile (str, optional): The S3 profile to use if storage_type is "s3". It is neccessary to define
+            your profile in ~/.aws/credentials. Defaults to "default".
+        s3_bucket (str | None, optional): The S3 bucket to use if storage_type is "s3". Defaults to None.
+        **download_args: Additional arguments to be passed to the download function.
 
     Returns:
-        Tuple[DataFrame, ParquetDataset]: A tuple containing the retrieved data as a DataFrame and the ParquetDataset.
+        None
     """
+
     if isinstance(lookup_queries, str):
         lookup_queries = lookup_queries.split(",")
-    lu_res = await get_lookup(lookup_query=lookup_queries, type_=type_, **DOWNLOAD_ARGS)
+    lu_res = await get_lookup(lookup_query=lookup_queries, type_=type_, **download_args)
 
     symbols = sorted(set(lu_res["symbol"]))
 
@@ -240,12 +229,10 @@ async def get_all(
     valid_symbols = sorted(set(valid_symbols.query("valid")["symbol"]))
 
     summary_profile, quote_type = await get_quote_summary(
-        symbols=valid_symbols, **DOWNLOAD_ARGS
+        symbols=valid_symbols, **download_args
     )
 
-    quotes = await get_quotes(
-        valid_symbols, SETTINGS.parameters.run.chunk_size, **DOWNLOAD_ARGS
-    )
+    quotes = await get_quotes(valid_symbols, **download_args)
 
     df = (
         (
@@ -258,15 +245,17 @@ async def get_all(
         .with_columns(pl.lit(dt.date.today()).alias("added"))
     )
 
-    if FS is not None:
+    if "sqlite" not in storage_type.lower():
+        if os.path.isfile(storage_path):
+            storage_path = os.path.splitext(storage_path)[0]
         ds = ParquetDataset(
-            path=SETTINGS.storage.s3.path
-            if SETTINGS.storage.type.lower() == "s3"
-            else SETTINGS.storage.local.path,
-            partitioning=SETTINGS.storage.s3.partitioning
-            if SETTINGS.storage.type.lower() == "s3"
-            else SETTINGS.storage.local.partitioning,
-            filesystem=FS,
+            path=storage_path,
+            partitioning="hive",
+            filesystem=FileSystem(
+                protocol="s3" if storage_type == "s3" else "file",
+                profile=s3_profile if storage_type == "s3" else None,
+                bucket=s3_bucket if storage_type == "s3" else None,
+            ),
         )
         ds.load(update_metadata=True)
         ds.write_to_dataset(
@@ -275,166 +264,203 @@ async def get_all(
             num_rows=1_000_000,
             row_group_size=250_000,
             compression="zstd",
-            sort_by=SETTINGS.parameters.run.sort_by,
-            partitioning_columns=SETTINGS.parameters.run.partitioning_columns,
+            sort_by=["exchange", "symbol"],
+            partitioning_columns=["type"],
             unique=True,
-            delta_subset=SETTINGS.parameters.run.delta_subset,
-            delta_other_df_filter_columns=SETTINGS.parameters.run.delta_subset,
+            delta_subset=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
+            delta_other_df_filter_columns=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
             on="parquet_dataset",
             use="pyarrow",
         )
     else:
+        if os.path.exists(storage_path):
+            if not os.path.isfile(storage_path):
+                storage_path = os.path.join(storage_path, "yahoo-symbols.sqlite")
+        else:
+            if "." in storage_path:
+                os.makedirs(os.path.dirname(storage_path), exist_ok=True)
+            else:
+                os.makedirs(storage_path, exist_ok=True)
+                storage_path = os.path.join(storage_path, "yahoo-symbols.sqlite")
+
         delta_df = df.delta(
             pl.read_database_uri(
                 f"SELECT * FROM {type_}",
-                uri=f"sqlite3:///{SETTINGS.storage.sqlite.path}",
+                uri=f"sqlite3:///{storage_path}",
             ),
-            subset=SETTINGS.parameters.run.delta_subset,
+            subset=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
         )
         if delta_df.shape[0]:
             delta_df.write_database(
                 name=type_,
-                connection=f"sqlite3:///{SETTINGS.storage.sqlite.path}",
+                connection=f"sqlite3:///{storage_path}",
                 if_exists="append",
             )
 
-    return df, ds
+    #return df, ds
 
 
 @app.command()
-def export(path: str, types: str = None, to: str = "csv"):
+def export(
+    export_path: str,
+    types: str = None,
+    to: str = "csv",
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = "default",
+    s3_bucket: str  = None,
+):
     """
-    Export data to a specified file format.
+    Export data to a specified format.
 
-    Parameters:
-        path (str): The path to the directory where the exported file will be saved.
+    Args:
+        export_path (str): The path where the exported data will be saved.
         types (str, optional): The types of data to export. Defaults to None.
-        to (str, optional): The file format to export the data to. Defaults to "csv".
+        to (str, optional): The format to export the data in. Valid options are "csv", "excel", "xlsx" or "json".
+            Defaults to "csv".
+        storage_path (str, optional): The path to the storage location. Defaults to "yahoo-symbols".
+        storage_type (str, optional): The type of storage. Defaults to "s3".
+        s3_profile (str, optional): The S3 profile to use. Defaults to "default".
+        s3_bucket (str | None, optional): The S3 bucket to use. Defaults to None.
 
     Returns:
         None
     """
-    types = types or SETTINGS.parameters.run.types
+
+    types = types or TYPES
     if isinstance(types, str):
         types = types.split(",")
 
-    if FS is not None:
+    if os.path.isfile(storage_path):
+        ds = None
+    else:
         ds = ParquetDataset(
-            path=SETTINGS.storage.s3.path
-            if SETTINGS.storage.type.lower() == "s3"
-            else SETTINGS.storage.local.path,
-            partitioning=SETTINGS.storage.s3.partitioning
-            if SETTINGS.storage.type.lower() == "s3"
-            else SETTINGS.storage.local.partitioning,
-            filesystem=FS,
+            path=storage_path,
+            partitioning="hive",
+            filesystem=FileSystem(
+                protocol="s3" if storage_type == "s3" else "file",
+                profile=s3_profile if storage_type == "s3" else None,
+                bucket=s3_bucket if storage_type == "s3" else None,
+            ),
         )
         ds.load(update_metadata=True)
 
-    else:
-        ds = None
     for type_ in types:
         if ds is not None:
             df = pl.from_arrow(ds.filter(f"type={type_}").to_table())
         else:
             df = pl.read_database_uri(
                 f"SELECT * FROM {type_}",
-                uri=f"sqlite3:///{SETTINGS.storage.sqlite.path}",
+                uri=f"sqlite3:///{storage_path}",
             )
 
         if to == "csv":
-            path_ = os.path.join(path, f"{type_}.csv")
+            path_ = os.path.join(os.path.splitext(export_path)[0], f"{type_}.csv")
             df.write_csv(path_)
-        elif to == "excel":
-            path_ = os.path.join(path, "yahoo-symbols.xlsx")
+        elif to in ["xlsx", "excel"]:
+            path_ = os.path.join(os.path.splitext(export_path)[0], "yahoo-symbols.xlsx")
             df.write_excel(path_, worksheet=type_)
+        elif to == "json":
+            path_ = os.path.join(os.path.splitext(export_path)[0], f"{type_}.json")
+            df.write_json(path_, pretty=True, row_oriented=True)
 
 
 @app.command()
 async def run(
     types: str = None,
-    query_length: int = None,
-    concurrency: int = None,
-    chunk_size: int = None,
-    sort_by: str = None,
-    partitioning_columns: list[str] = None,
-    random_proxy: bool = None,
-    random_user_agent: bool = None,
-    max_retries: int = None,
-    random_delay_multiplier: int = None,
+    query_length: int = "2",
+    batch_size: int = 1000,
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = "default",
+    s3_bucket: str = None,
+    random_proxy: bool = False,
+    random_user_agent: bool = True,
+    concurrency: int = 25,
+    max_retries: int = 3,
+    random_delay_multiplier: int = 5,
 ):
     """
-    Run the specified types of queries with the given parameters.
+    Asynchronous function that runs a series of queries on a given type of data.
 
-    Parameters:
-        types (str): The types of queries to run. Default is None.
-        query_length (int): The length of each query. Default is None.
-        concurrency (int): The number of queries to run concurrently. Default is None.
-        chunk_size (int): The size of each chunk. Default is None.
-        sort_by (str): The field to sort the results by. Default is None.
-        partitioning_columns (list[str]): The columns to partition the results by. Default is None.
-        random_proxy (bool): Whether to use a random proxy. Default is None.
-        random_user_agent (bool): Whether to use a random user agent. Default is None.
-        max_retries (int): The maximum number of retries. Default is None.
-        random_delay_multiplier (int): The multiplier for random delay. Default is None.
+    Args:
+        types (str): The type of data to run queries on. Defaults to None.
+        query_length (int): The length of the queries. Defaults to "2".
+        batch_size (int): The number of queries to run in each batch. Defaults to 1000.
+        storage_path (str): The path to store the results. Defaults to "yahoo-symbols".
+        storage_type (str, optional): The type of storage to use. Valid options are: "s3", "local" or "sqlite".
+            Defaults to "s3".
+        s3_profile (str, optional): The S3 profile to use if storage_type is "s3". It is neccessary to define
+            your profile in ~/.aws/credentials. Defaults to "default".
+        s3_bucket (str | None): The S3 bucket to use. Defaults to None.
+        random_proxy (bool): Whether to use a random proxy. Defaults to False.
+        random_user_agent (bool): Whether to use a random user agent. Defaults to True.
+        concurrency (int): The number of queries to run concurrently. Defaults to 25.
+        max_retries (int): The maximum number of retries. Defaults to 3.
+        random_delay_multiplier (int): The multiplier for the random delay. Defaults to 5.
 
     Returns:
         None
     """
-    SETTINGS.parameters.run.types = types or SETTINGS.parameters.run.types
-    SETTINGS.parameters.run.query_length = (
-        query_length or SETTINGS.parameters.run.query_length
-    )
-    SETTINGS.parameters.run.concurrency = (
-        concurrency or SETTINGS.parameters.run.concurrency
-    )
-    SETTINGS.parameters.run.chunk_size = (
-        chunk_size or SETTINGS.parameters.run.chunk_size
-    )
-    SETTINGS.parameters.run.sort_by = sort_by or SETTINGS.parameters.run.sort_by
-    SETTINGS.parameters.run.partitioning_columns = (
-        partitioning_columns or SETTINGS.parameters.run.partitioning_columns
-    )
-    SETTINGS.parameters.download.random_proxy = (
-        random_proxy or SETTINGS.parameters.download.random_proxy
-    )
-    SETTINGS.parameters.download.random_user_agent = (
-        random_user_agent or SETTINGS.parameters.download.random_user_agent
-    )
-    SETTINGS.parameters.download.max_retries = (
-        max_retries or SETTINGS.parameters.download.max_retries
-    )
-    SETTINGS.parameters.download.random_delay_multiplier = (
-        random_delay_multiplier or SETTINGS.parameters.download.random_delay_multiplier
-    )
-
-    letters = list(ascii_lowercase)
-    numbers = list(digits)
-    samples = letters + numbers + [".", "-"]
+    
 
     lookup_queries = [
         "".join(q)
         for ql in range(1, query_length + 1)
-        for q in list(product(*[samples for n in range(ql)]))
+        for q in list(product(*[SAMPLES for n in range(ql)]))
     ]
 
-    if isinstance(SETTINGS.parameters.run.types, str):
-        types = SETTINGS.parameters.run.types.split(",")
-    else:
-        types = SETTINGS.parameters.run.types
+    types = types or TYPES
+    if isinstance(types, str):
+        types = types.split(",")
 
     logger.info(
-        f"Starting: types={types}, query_length={query_length}, concurrency={concurrency}, chunk_size={chunk_size}, sort_by={sort_by}, partitioning_columns={partitioning_columns}"
+        f"Starting: types={types}, query_length={query_length}, batch_size={batch_size}, concurrency={concurrency}, "
+        + f"random_proxy={random_proxy}, random_user_agent={random_user_agent}"
     )
     for type_ in types:
         logger.info(f"Starting type: {type_}")
-        for n in range(len(lookup_queries) // SETTINGS.parameters.run.concurrency + 1):
+        for n in range(len(lookup_queries) // batch_size + 1):
             logger.info(f"Starting batch: {n}")
-            _lookup_queries = lookup_queries[
-                n * SETTINGS.parameters.run.concurrency : (n + 1)
-                * SETTINGS.parameters.run.concurrency
-            ]
+            _lookup_queries = lookup_queries[n * batch_size : (n + 1) * batch_size]
 
-            df, ds = await get_all(_lookup_queries, type_)
+            df, ds = await download(
+                _lookup_queries,
+                type_,
+                storage_path=storage_path,
+                storage_type=storage_type,
+                s3_profile=s3_profile,
+                s3_bucket=s3_bucket,
+                concurrency=concurrency,
+                random_proxy=random_proxy,
+                random_user_agent=random_user_agent,
+                max_retries=max_retries,
+                random_delay_multiplier=random_delay_multiplier,
+            )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")
     logger.success("Completed")

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import msgspec
 
 
@@ -33,11 +31,7 @@ class Storage(msgspec.Struct):
 class Run(msgspec.Struct):
     types: list[str]
     query_length: int
-    concurrency: int
-    chunk_size: int
-    sort_by: str | list[str]
-    partitioning_columns: list[str]
-    delta_subset: list[str]
+    batch_size: int
 
 
 class Download(msgspec.Struct):
@@ -74,6 +68,3 @@ class Settings(msgspec.Struct):
 def load_settings(path: str):
     with open(path) as f:
         return msgspec.yaml.decode(f.read(), type=Settings)
-
-
-SETTINGS = load_settings(Path(__file__).parents[2] / "config/settings.yml")

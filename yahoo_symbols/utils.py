@@ -62,6 +62,18 @@ async def repeat_until_completed(
 
 
 class AsyncTyper(Typer):
+    """
+    Decorates a function with the given decorator, but only if the function is not already a coroutine function.
+
+    Args:
+        decorator (function): The decorator to apply to the function.
+        f (function): The function to decorate.
+
+    Returns:
+        function: The decorated function.
+    """
+
+
     @staticmethod
     def maybe_run_async(decorator, f):
         if inspect.iscoroutinefunction(f):
