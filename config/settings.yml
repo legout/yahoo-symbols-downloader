@@ -1,0 +1,56 @@
+---
+parameters:
+  download:
+    concurrency: 25
+    max_retries: 5
+    random_delay_multiplier: 5
+    random_proxy: true
+    random_user_agent: true
+    verbose: false
+  run:
+    chunk_size: 500
+    concurrency: 1000
+    delta_subset:
+      - symbol
+      - exchange
+      - type
+      - short_name
+      - long_name
+      - market
+      - underlying_symbol
+    partitioning_columns:
+      - type
+    query_length: 2
+    sort_by:
+      - exchange
+      - symbol
+    types:
+      - equity
+      - mutualfund
+      - etf
+      - index
+      - future
+      - currency
+      - cryptocurrency
+schedule:
+  cron: 0 0 * * *
+  logging:
+    filename: tasks
+    path: null
+    repo: csv
+storage:
+  local:
+    bucket: yahoo-symbols
+    partitioning: hive
+    path: symbol-info
+  s3:
+    bucket: yahoo-symbols
+    endpoint_url: null
+    key: null
+    partitioning: hive
+    path: symbol-info
+    profile: minio
+    secret: null
+  sqlite:
+    path: yahoo-symbols.db
+  type: s3
