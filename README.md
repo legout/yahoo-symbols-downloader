@@ -162,19 +162,27 @@ When using the  option `--random-proxy`  free proxies* are used. Usage of free p
 ### Configure Webshare.io proxies
 I am using proxies from [webshare.io](https://www.webshare.io/?referral_code=upb7xtsy39kl). I am very happy with their service and the pricing. If you wanna use their service too, sign up (use the [this link](https://www.webshare.io/?referral_code=upb7xtsy39kl) if you wanna support my work) and choose a plan that fits your needs. In the next step, go to Dashboard -> Proxy -> List -> Download and copy the download link. Set this download link as an environment variable `WEBSHARE_PROXIES_URL`  before running the download script. 
 
-*Export WEBSHARE_PROXIES_URL in your linux shell*
+You have several options to set a environment variable in Linux or macOS.
+
+#### 1. Export
+Set it temporarily by running this in your shell.
 ```shell
 $ export WEBSHARE_PROXIES_URL="https://proxy.webshare.io/api/v2/proxy/list/download/abcdefg1234567/-/any/username/direct/-/"
 ```
 
 You can also set this environment variable permanently in an `.env` file in your home folder or current folder or in your command line config file (e.g. `~/.bashrc`).
 
-*Write WEBSHARE_PROXIES_URL into .env*
+#### 2. Write to .env
+Write it into an `.env` file and copy this file into your home directory or the directory where you run the download script from.
 ```shell
-WEBSHARE_PROXIES_URL="https://proxy.webshare.io/api/v2/proxy/list/download/abcdefg1234567/-/any/username/direct/-/"
+echo 'WEBSHARE_PROXIES_URL="https://proxy.webshare.io/api/v2/proxy/list/download/abcdefg1234567/-/any/username/direct/-/"' >> .env
+# optional
+mv .env ~/.env
 ```
 
-*or write WEBSHARE_PROXIES_URL into your shell config file (e.g. ~/.bashrc)*
+
+#### 3. Write to shell rc file
+Write the export command into your shell rc file like `~/.bashrc` or `~/.zshrc`
 ```shell
 $ echo 'export WEBSHARE_PROXIES_URL="https://proxy.webshare.io/api/v2/proxy/list/download/abcdefg1234567/-/any/username/direct/-/"' >> ~/.bashrc
 ```
