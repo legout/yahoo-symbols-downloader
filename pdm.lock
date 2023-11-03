@@ -846,7 +846,7 @@ files = [
 
 [[package]]
 name = "jupyterlab"
-version = "4.0.7"
+version = "4.0.8"
 requires_python = ">=3.8"
 summary = "JupyterLab computational environment"
 dependencies = [
@@ -863,8 +863,8 @@ dependencies = [
     "traitlets",
 ]
 files = [
-    {file = "jupyterlab-4.0.7-py3-none-any.whl", hash = "sha256:08683045117cc495531fdb39c22ababb9aaac6977a45e67cfad20046564c9c7c"},
-    {file = "jupyterlab-4.0.7.tar.gz", hash = "sha256:48792efd9f962b2bcda1f87d72168ff122c288b1d97d32109e4a11b33dc862be"},
+    {file = "jupyterlab-4.0.8-py3-none-any.whl", hash = "sha256:2ff5aa2a51eb21df241d6011c236e88bd1ff9a5dbb75bebc54472f9c18bfffa4"},
+    {file = "jupyterlab-4.0.8.tar.gz", hash = "sha256:c4fe93f977bcc987bd395d7fae5ab02e0c042bf4e0f7c95196f3e2e578c2fb3a"},
 ]
 
 [[package]]
@@ -2210,7 +2210,7 @@ files = [
 [[package]]
 name = "yfin"
 version = "0.2.3"
-requires_python = "<4.0,>=3.10"
+requires_python = ">=3.10,<4.0"
 git = "https://github.com/legout/yfin"
 revision = "563921eba1002de2648dff3eb32174daa94c6a9a"
 summary = ""
