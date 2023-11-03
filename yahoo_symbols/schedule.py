@@ -35,7 +35,6 @@ elif SETTINGS.storage.type.lower() == "local":
 else:
     FS = None
     STORAGE_PATH = SETTINGS.storage.sqlite.path
-    
 
 
 DOWNLOAD_ARGS = msgspec.structs.asdict(SETTINGS.parameters.download)
@@ -78,7 +77,7 @@ async def update_symbol_info():
         storage_path=STORAGE_PATH,
         s3_bucket=SETTINGS.storage.s3.bucket,
         s3_profile=SETTINGS.storage.s3.profile,
-        **DOWNLOAD_ARGS
+        **DOWNLOAD_ARGS,
     )
 
 

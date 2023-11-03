@@ -40,5 +40,5 @@ includes = [
 ]
 
 [tool.pdm.scripts]
-scheduler = "python -m yahoo_sambols.scheduler"
-downloader = "python -m yahoo_sambols.run run"
+scheduler = "python -m yahoo_symbols.scheduler"
+downloader = "python -m yahoo_symbols.run run"

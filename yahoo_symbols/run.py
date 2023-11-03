@@ -64,7 +64,9 @@ async def get_lookup(
         return res
 
 
-async def get_quote_summary(symbols: list[str], *args, **kwargs)->tuple[pl.DataFrame, pl.DataFrame]:
+async def get_quote_summary(
+    symbols: list[str], *args, **kwargs
+) -> tuple[pl.DataFrame, pl.DataFrame]:
     """
     Retrieves summary profile and quote type information for a list of symbols.
 
@@ -134,7 +136,7 @@ async def get_quote_summary(symbols: list[str], *args, **kwargs)->tuple[pl.DataF
     return summary_profile, quote_type
 
 
-async def get_quotes(symbols: list[str], *args, **kwargs)->pl.DataFrame:
+async def get_quotes(symbols: list[str], *args, **kwargs) -> pl.DataFrame:
     """
     Retrieves quotes for a list of symbols from Yahoo Finance.
 
@@ -198,8 +200,12 @@ async def download(
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
     s3_profile: str = "default",
-    s3_bucket: str  = None,
-    **download_args,
+    s3_bucket: str = None,
+    random_proxy: bool = False,
+    random_user_agent: bool = True,
+    concurrency: int = 25,
+    max_retries: int = 3,
+    random_delay_multiplier: int = 5,
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -213,7 +219,7 @@ async def download(
         s3_profile (str, optional): The S3 profile to use if storage_type is "s3". It is neccessary to define
             your profile in ~/.aws/credentials. Defaults to "default".
         s3_bucket (str | None, optional): The S3 bucket to use if storage_type is "s3". Defaults to None.
-        **download_args: Additional arguments to be passed to the download function.
+
 
     Returns:
         None
@@ -221,7 +227,15 @@ async def download(
 
     if isinstance(lookup_queries, str):
         lookup_queries = lookup_queries.split(",")
-    lu_res = await get_lookup(lookup_query=lookup_queries, type_=type_, **download_args)
+    lu_res = await get_lookup(
+        lookup_query=lookup_queries,
+        type_=type_,
+        random_proxy=random_proxy,
+        random_user_agent=random_user_agent,
+        random_delay_multiplier=random_delay_multiplier,
+        concurrency=concurrency,
+        max_retries=max_retries,
+    )
 
     symbols = sorted(set(lu_res["symbol"]))
 
@@ -229,10 +243,22 @@ async def download(
     valid_symbols = sorted(set(valid_symbols.query("valid")["symbol"]))
 
     summary_profile, quote_type = await get_quote_summary(
-        symbols=valid_symbols, **download_args
+        symbols=valid_symbols,
+        random_proxy=random_proxy,
+        random_user_agent=random_user_agent,
+        random_delay_multiplier=random_delay_multiplier,
+        concurrency=concurrency,
+        max_retries=max_retries,
     )
 
-    quotes = await get_quotes(valid_symbols, **download_args)
+    quotes = await get_quotes(
+        valid_symbols,
+        random_proxy=random_proxy,
+        random_user_agent=random_user_agent,
+        random_delay_multiplier=random_delay_multiplier,
+        concurrency=concurrency,
+        max_retries=max_retries,
+    )
 
     df = (
         (
@@ -262,10 +288,10 @@ async def download(
             df=df,
             mode="delta",
             num_rows=1_000_000,
-            row_group_size=250_000,
+            row_group_size=100_000,
             compression="zstd",
             sort_by=["exchange", "symbol"],
-            partitioning_columns=["type"],
+            partitioning_columns=["type", "market", "exchange"],
             unique=True,
             delta_subset=[
                 "symbol",
@@ -321,7 +347,7 @@ async def download(
                 if_exists="append",
             )
 
-    #return df, ds
+    # return df, ds
 
 
 @app.command()
@@ -332,7 +358,7 @@ def export(
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
     s3_profile: str = "default",
-    s3_bucket: str  = None,
+    s3_bucket: str = None,
 ):
     """
     Export data to a specified format.
@@ -426,7 +452,6 @@ async def run(
     Returns:
         None
     """
-    
 
     lookup_queries = [
         "".join(q)
@@ -448,7 +473,7 @@ async def run(
             logger.info(f"Starting batch: {n}")
             _lookup_queries = lookup_queries[n * batch_size : (n + 1) * batch_size]
 
-            df, ds = await download(
+            await download(
                 _lookup_queries,
                 type_,
                 storage_path=storage_path,

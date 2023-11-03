@@ -1,11 +1,11 @@
 import inspect
 from functools import partial, wraps
 
-import anyio
+# import anyio
 import asyncer
 import pandas as pd
 import polars as pl
-import typer
+#import typer
 from typer import Typer
 
 
@@ -72,7 +72,6 @@ class AsyncTyper(Typer):
     Returns:
         function: The decorated function.
     """
-
 
     @staticmethod
     def maybe_run_async(decorator, f):
