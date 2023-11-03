@@ -16,7 +16,7 @@ dependencies = [
     "rocketry>=2.5.1",
     "polars[sqlalchemy]>=0.19.12",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 readme = "README.md"
 license = {text = "MIT"}
 
