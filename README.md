@@ -15,7 +15,7 @@ The Downloader can be run [manually](#1-run-the-script-manually) or can be [sche
 ```shell
 git clone https://github.com/legout/yahoo-symbols
 cd yahoo-symbols
-pdm install
+pdm install --prod
 ```
 
 ### Using pip 
