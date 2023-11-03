@@ -15,6 +15,7 @@ dependencies = [
     "rocketry>=2.5.1",
     "polars[sqlalchemy]>=0.19.12",
     "yfin @ git+https://github.com/legout/yfin",
+    "pydantic==1.10.10",
 ]
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
@@ -40,5 +41,5 @@ includes = [
 ]
 
 [tool.pdm.scripts]
-scheduler = "python -m yahoo_symbols.scheduler"
+scheduler = "python -m yahoo_symbols.schedule"
 downloader = "python -m yahoo_symbols.run run"

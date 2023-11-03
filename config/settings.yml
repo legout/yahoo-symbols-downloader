@@ -22,8 +22,8 @@ schedule:
   cron: 30 23 * * 1,3,5
   logging:
     filename: tasks
-    path: null
-    repo: csv
+    path: logs
+    repo: csv # csv or sqlite (currently not working, use csv)
 storage:
   local:
     bucket: yahoo-symbols
@@ -33,7 +33,7 @@ storage:
     bucket: yahoo-symbols
     partitioning: hive
     path: symbol-info
-    profile: minio
+    profile: storj
   sqlite:
     path: yahoo-symbols.db
-  type: s3
+  type: s3 # sqlite, local, s3

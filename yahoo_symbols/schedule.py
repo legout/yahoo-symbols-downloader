@@ -12,14 +12,14 @@ from pathlib import Path
 
 # load SETTINGS
 
-SETTINGS = load_settings(Path(__file__).parent / "config/settings.yml")
+SETTINGS = load_settings(Path(__file__).parents[1] / "config/settings.yml")
 
 if SETTINGS.storage.type.lower() == "s3":
     FS = FileSystem(
         protocol="s3",
-        key=SETTINGS.storage.s3.key,
-        secret=SETTINGS.storage.s3.secret,
-        endpoint_url=SETTINGS.storage.s3.endpoint_url,
+        #key=SETTINGS.storage.s3.key,
+        #secret=SETTINGS.storage.s3.secret,
+        #endpoint_url=SETTINGS.storage.s3.endpoint_url,
         profile=SETTINGS.storage.s3.profile,
         bucket=SETTINGS.storage.s3.bucket,
     )
@@ -43,31 +43,32 @@ DOWNLOAD_ARGS = msgspec.structs.asdict(SETTINGS.parameters.download)
 if SETTINGS.schedule.logging.repo == "csv":
     repo = CSVFileRepo(
         filename=os.path.join(
-            SETTINGS.schedule.logging.path, SETTINGS.schedule.logging.filename + ".csv"
+            SETTINGS.schedule.logging.path or "", SETTINGS.schedule.logging.filename + ".csv"
         ),
         model=RunRecord,
     )
 
 elif SETTINGS.schedule.logging.repo == "sqlite":
     engine = sqlalchemy.create_engine(
-        f"sqlite:///{os.path.join(SETTINGS.schedule.logging.path, SETTINGS.schedule.logging.filename+'.db')}"
+        f"sqlite:///{os.path.join(SETTINGS.schedule.logging.path or '', SETTINGS.schedule.logging.filename+'.db')}"
     )
-    engine.execute(
-        """CREATE TABLE log (
-        id INTEGER PRIMARY KEY,
-        created FLOAT,
-        task_name TEXT,
-        run_id TEXT,
-        action TEXT
-    )"""
-    )
+    # con = engine.connect()
+    # con.execute(
+    #     """CREATE TABLE log (
+    #     id INTEGER PRIMARY KEY,
+    #     created FLOAT,
+    #     task_name TEXT,
+    #     run_id TEXT,
+    #     action TEXT
+    # )"""
+    #)
     repo = SQLRepo(model=RunRecord, table="log", engine=engine, id_field="id")
 
 # init app
 app = Rocketry(execution="async", logger_repo=repo)
 
 
-@app.task(SETTINGS.parameters.schedule.cron)
+@app.task(cron=SETTINGS.schedule.cron)
 async def update_symbol_info():
     await run(
         types=SETTINGS.parameters.run.types,

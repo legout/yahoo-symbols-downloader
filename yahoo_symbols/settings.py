@@ -2,9 +2,6 @@ import msgspec
 
 
 class S3Storage(msgspec.Struct):
-    key: str | None
-    secret: str | None
-    endpoint_url: str | None
     profile: str | None
     path: str | None
     bucket: str | None
