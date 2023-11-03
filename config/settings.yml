@@ -1,9 +1,9 @@
 ---
 parameters:
   download:
-    concurrency: 25
+    concurrency: 10
     max_retries: 5
-    random_delay_multiplier: 5
+    random_delay_multiplier: 10
     random_proxy: true
     random_user_agent: true
     verbose: false

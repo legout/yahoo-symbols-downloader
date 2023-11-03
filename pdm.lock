@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4"
-content_hash = "sha256:33066cbfc06b5cc4b056cf28bfec34e9dd813ba4da2156eca44fe7e7daae0a52"
+content_hash = "sha256:7c2654a631261665bc064062c481f291d6e2cff6d5a8eae4e939557368c3c5e9"
 
 [[package]]
 name = "aiobotocore"
@@ -1280,10 +1280,10 @@ files = [
 
 [[package]]
 name = "parallel-requests"
-version = "0.2.3"
-requires_python = "<3.13,>=3.10"
+version = "0.2.4"
+requires_python = ">=3.10,<3.13"
 git = "https://github.com/legout/parallel-requests"
-revision = "60f549bc3ea48d54f99ad5df15b4ba887c10615e"
+revision = "57c2ddb5a3c1d61ce0e2ca6f856eec965a481494"
 summary = ""
 dependencies = [
     "asyncer>=0.0.2",
@@ -2286,7 +2286,7 @@ name = "yfin"
 version = "0.2.4"
 requires_python = ">=3.11,<3.13"
 git = "https://github.com/legout/yfin"
-revision = "90be6a8d63d2ee653ed6d16ed8873429d740d098"
+revision = "7fe2dfc2059766385e151f63b9eae7399e41b1ef"
 summary = ""
 dependencies = [
     "lxml>=4.9.1",

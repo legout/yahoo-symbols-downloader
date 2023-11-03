@@ -31,9 +31,10 @@ async def download(
     s3_bucket: str = None,
     random_proxy: bool = False,
     random_user_agent: bool = True,
-    concurrency: int = 25,
-    max_retries: int = 3,
-    random_delay_multiplier: int = 5,
+    concurrency: int = 10,
+    max_retries: int = 5,
+    random_delay_multiplier: int = 10,
+    debug: bool=False
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -65,6 +66,7 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
+        debug=debug
     )
 
     symbols = sorted(set(lu_res["symbol"]))
@@ -95,6 +97,7 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
+        debug=debug
     )
 
     quotes = await get_quotes(
@@ -104,6 +107,7 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
+        debug=debug
     )
 
     df = (
@@ -178,7 +182,7 @@ async def download(
                 "underlying_symbol",
             ],
             on="parquet_dataset",
-            use="pyarrow",
+            use="duckdb",
         )
     logger.success(f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}")
 
@@ -258,9 +262,10 @@ async def run(
     s3_bucket: str = None,
     random_proxy: bool = False,
     random_user_agent: bool = True,
-    concurrency: int = 25,
-    max_retries: int = 3,
-    random_delay_multiplier: int = 5,
+    concurrency: int = 10,
+    max_retries: int = 5,
+    random_delay_multiplier: int = 10,
+    debug: bool = False,
 ):
     """
     Asynchronous function that runs a series of queries on a given type of data.
@@ -317,6 +322,7 @@ async def run(
                 random_user_agent=random_user_agent,
                 max_retries=max_retries,
                 random_delay_multiplier=random_delay_multiplier,
+                debug=debug,
             )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")
