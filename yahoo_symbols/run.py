@@ -1,196 +1,24 @@
 import datetime as dt
 import os
 from itertools import product
-
 from loguru import logger
 from pydala.dataset import ParquetDataset
 from pydala.filesystem import FileSystem
 from pydala.helpers.polars_ext import pl
-from yfin.quote_summary import quote_summary_async
-from yfin.quotes import quotes_async
-from yfin.symbols import lookup_search_async, validate_async
+from yfin.symbols import validate_async
 from .constants import TYPES, SAMPLES
 
-from .utils import AsyncTyper, repeat_until_completed
+from .helpers import (
+    get_quote_summary,
+    get_quotes,
+    get_lookup,
+    get_new_symbols,
+    run_sqlite_query,
+    get_parquet_dataset,
+)
+from .utils import AsyncTyper
 
 app = AsyncTyper()
-
-
-async def get_lookup(
-    lookup_query: list[str],
-    type_: str,
-    *args,
-    **kwargs,
-) -> pl.DataFrame:
-    """
-    This function performs a lookup search using the given query and type, and returns a DataFrame
-    containing the symbol, name, exchange, and type of the results.
-
-    Args:
-        lookup_query (list[str]): A list of strings representing the search query.
-        type_ (str): The type of search to perform.
-        *args: Additional positional arguments to pass to the lookup_search_async function.
-        **kwargs: Additional keyword arguments to pass to the lookup_search_async function.
-
-    Returns:
-        pl.DataFrame: A DataFrame containing the symbol, name, exchange, and type of the results.
-    """
-    res = await lookup_search_async(
-        query=lookup_query,
-        type_=type_,
-        *args,
-        **kwargs,
-    )
-
-    if res.shape[0] > 0:
-        res = pl.from_pandas(res)
-        renames = {
-            k: v
-            for k, v in {
-                "shortName": "name",
-                "quoteType": "type",
-            }.items()
-            if k in res.columns
-        }
-
-        res = res.rename(renames).group_by(["symbol", "exchange"]).agg(pl.all().first())
-        res = res[
-            [
-                col
-                for col in res.columns
-                if col in ["symbol", "name", "exchange", "type"]
-            ]
-        ]
-        return res
-
-
-async def get_quote_summary(
-    symbols: list[str], *args, **kwargs
-) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """
-    Retrieves summary profile and quote type information for a list of symbols.
-
-    Args:
-        symbols (list[str]): A list of symbols to retrieve information for.
-        *args: Variable length argument list.
-        **kwargs: Arbitrary keyword arguments.
-
-    Returns:
-        Tuple[pl.DataFrame, pl.DataFrame]: A tuple containing two pandas.DataFrame objects, one for summary profile and one for quote type information.
-    """
-    res = await repeat_until_completed(
-        func=quote_summary_async,
-        symbols=symbols,
-        modules=["summary_profile", "quote_type"],
-        *args,
-        **kwargs,
-    )
-
-    summary_profile = res["summary_profile"]
-    if summary_profile.shape[0]:
-        summary_profile = pl.from_pandas(summary_profile).drop(
-            [
-                col
-                for col in [
-                    "company_officers",
-                    "industry_dips",
-                    "first_trade_date_epoch_utc",
-                ]
-                if col in summary_profile.columns
-            ]
-        )
-    else:
-        summary_profile = pl.DataFrame({"symbol": []}).with_columns(
-            pl.col("symbol").cast(pl.Utf8())
-        )
-
-    quote_type = res["quote_type"]
-    if quote_type.shape[0]:
-        quote_type = (
-            pl.from_pandas(quote_type)
-            .rename(
-                {
-                    "quote_type": "type",
-                    "time_zone_full_name": "timezone",
-                    "first_trade_date_epoch_utc": "first_trade_date",
-                }
-            )
-            .with_columns(pl.col("type").str.to_lowercase())
-            .drop(
-                [
-                    col
-                    for col in [
-                        "uuid",
-                        "message_board_id",
-                        "time_zone_short_name",
-                    ]
-                    if col in quote_type.columns
-                ]
-            )
-        )
-    else:
-        quote_type = pl.DataFrame({"symbol": [], "exchange": []}).with_columns(
-            pl.col(["symbol", "exchange"]).cast(pl.Utf8())
-        )
-
-    return summary_profile, quote_type
-
-
-async def get_quotes(symbols: list[str], *args, **kwargs) -> pl.DataFrame:
-    """
-    Retrieves quotes for a list of symbols from Yahoo Finance.
-
-    Args:
-        symbols (list[str]): A list of symbols to retrieve quotes for.
-        *args: Additional arguments to pass to the `quotes_async` function.
-        **kwargs: Additional keyword arguments to pass to the `quotes_async` function.
-
-    Returns:
-        pl.DataFrame: A polars DataFrame containing the retrieved quotes.
-    """
-    quotes = await repeat_until_completed(
-        func=quotes_async,
-        symbols=symbols,
-        chunk_size=500,
-        fields=["twoHundredDayAverageChangePercent", "currency"],
-        *args,
-        **kwargs,
-    )
-
-    quotes = pl.from_pandas(quotes)
-
-    if quotes.shape[0]:
-        quotes = (
-            quotes.select(
-                [
-                    col
-                    for col in [
-                        "currency",
-                        "exchange",
-                        "market",
-                        "exchange_data_delayed_by",
-                        "full_exchange_name",
-                        "symbol",
-                        "quote_type",
-                    ]
-                    if col in quotes.columns
-                ]
-            )
-            .rename(
-                {
-                    "quote_type": "type",
-                    "full_exchange_name": "exchange_name",
-                    "exchange_data_delayed_by": "exchange_data_delay",
-                }
-            )
-            .with_columns(pl.col("type").str.to_lowercase())
-        )
-    else:
-        quotes = pl.DataFrame({"symbol": [], "exchange": []}).with_columns(
-            pl.col(["symbol", "exchange"]).cast(pl.Utf8())
-        )
-
-    return quotes
 
 
 @app.command()
@@ -227,6 +55,8 @@ async def download(
 
     if isinstance(lookup_queries, str):
         lookup_queries = lookup_queries.split(",")
+    
+    logger.info(f"Processing queries: {lookup_queries[0]} - {lookup_queries[-1]}")
     lu_res = await get_lookup(
         lookup_query=lookup_queries,
         type_=type_,
@@ -238,10 +68,26 @@ async def download(
     )
 
     symbols = sorted(set(lu_res["symbol"]))
-
-    valid_symbols = await validate_async(symbols)
+    new_symbols = get_new_symbols(
+        symbols=symbols,
+        type_=type_,
+        storage_path=storage_path,
+        storage_type=storage_type,
+        s3_profile=s3_profile,
+        s3_bucket=s3_bucket,
+    )
+    if len(new_symbols) == 0:
+        logger.success("No new symbols found. Finished")
+        return
+    valid_symbols = await validate_async(new_symbols)
     valid_symbols = sorted(set(valid_symbols.query("valid")["symbol"]))
-
+    
+    if len(valid_symbols) == 0:
+        logger.success("No new valid symbols found. Finished")
+        return
+    
+    logger.info(f"Found {len(valid_symbols)} new valid symbols")
+    
     summary_profile, quote_type = await get_quote_summary(
         symbols=valid_symbols,
         random_proxy=random_proxy,
@@ -270,20 +116,40 @@ async def download(
         .filter(pl.col("type") == type_)
         .with_columns(pl.lit(dt.date.today()).alias("added"))
     )
-
-    if "sqlite" not in storage_type.lower():
+    logger.info(f"Downloaded {df.shape[0]} new {type_} symbols")
+    
+    if "sqlite" in str(storage_type):
+        df_existing = run_sqlite_query(
+            f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
+        )
+        delta_df = df.delta(
+            df_existing,
+            subset=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
+        )
+        if delta_df.shape[0]:
+            delta_df.write_database(
+                name=type_,
+                connection=f"sqlite3:///{storage_path}",
+                if_exists="append",
+            )
+        
+    else:
         if os.path.isfile(storage_path):
             storage_path = os.path.splitext(storage_path)[0]
-        ds = ParquetDataset(
-            path=storage_path,
-            partitioning="hive",
-            filesystem=FileSystem(
-                protocol="s3" if storage_type == "s3" else "file",
-                profile=s3_profile if storage_type == "s3" else None,
-                bucket=s3_bucket if storage_type == "s3" else None,
-            ),
+        ds = get_parquet_dataset(
+            storage_path=storage_path,
+            storage_type=storage_type,
+            s3_profile=s3_profile,
+            s3_bucket=s3_bucket,
         )
-        ds.load(update_metadata=True)
         ds.write_to_dataset(
             df=df,
             mode="delta",
@@ -314,38 +180,7 @@ async def download(
             on="parquet_dataset",
             use="pyarrow",
         )
-    else:
-        if os.path.exists(storage_path):
-            if not os.path.isfile(storage_path):
-                storage_path = os.path.join(storage_path, "yahoo-symbols.sqlite")
-        else:
-            if "." in storage_path:
-                os.makedirs(os.path.dirname(storage_path), exist_ok=True)
-            else:
-                os.makedirs(storage_path, exist_ok=True)
-                storage_path = os.path.join(storage_path, "yahoo-symbols.sqlite")
-
-        delta_df = df.delta(
-            pl.read_database_uri(
-                f"SELECT * FROM {type_}",
-                uri=f"sqlite3:///{storage_path}",
-            ),
-            subset=[
-                "symbol",
-                "exchange",
-                "type",
-                "short_name",
-                "long_name",
-                "market",
-                "underlying_symbol",
-            ],
-        )
-        if delta_df.shape[0]:
-            delta_df.write_database(
-                name=type_,
-                connection=f"sqlite3:///{storage_path}",
-                if_exists="append",
-            )
+    logger.success(f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}")
 
     # return df, ds
 
@@ -384,24 +219,20 @@ def export(
     if os.path.isfile(storage_path):
         ds = None
     else:
-        ds = ParquetDataset(
-            path=storage_path,
-            partitioning="hive",
-            filesystem=FileSystem(
-                protocol="s3" if storage_type == "s3" else "file",
-                profile=s3_profile if storage_type == "s3" else None,
-                bucket=s3_bucket if storage_type == "s3" else None,
-            ),
+        ds = get_parquet_dataset(
+            storage_path=storage_path,
+            storage_type=storage_type,
+            s3_profile=s3_profile,
+            s3_bucket=s3_bucket,
         )
-        ds.load(update_metadata=True)
 
     for type_ in types:
+        logger.info(f"Exporting {type_} data")
         if ds is not None:
             df = pl.from_arrow(ds.filter(f"type={type_}").to_table())
         else:
-            df = pl.read_database_uri(
-                f"SELECT * FROM {type_}",
-                uri=f"sqlite3:///{storage_path}",
+            df = run_sqlite_query(
+                f"SELECT * FROM {type_}", storage_path=storage_path
             )
 
         if to == "csv":
@@ -413,7 +244,8 @@ def export(
         elif to == "json":
             path_ = os.path.join(os.path.splitext(export_path)[0], f"{type_}.json")
             df.write_json(path_, pretty=True, row_oriented=True)
-
+        logger.info(f"Finished exporting {type_} data")
+    logger.success(f"Finished exporting data to {export_path}")
 
 @app.command()
 async def run(
