@@ -1,6 +1,6 @@
 [project]
-name = "yahoo-sambols"
-version = "0.1.0"
+name = "yahoo-symbols"
+version = "0.1.2"
 description = "Balzing fast yahoo symbol downloader."
 authors = [
     {name = "Volker Lorrmann", email = "volker.lorrmann@gmail.com"},
