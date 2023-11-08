@@ -4,11 +4,16 @@ from redbird.repos import CSVFileRepo, SQLRepo
 import sqlalchemy
 from rocketry import Rocketry
 from rocketry.log import RunRecord
+from rocketry.conds import cron
 from .run import run
 from .settings import load_settings
 from pydala.filesystem import FileSystem
 import msgspec
 from pathlib import Path
+import logging
+
+sched_logger = logging.getLogger("rocketry.scheduler")
+sched_logger.addHandler(logging.StreamHandler())
 
 # load SETTINGS
 
@@ -68,10 +73,10 @@ elif SETTINGS.schedule.logging.repo == "sqlite":
 app = Rocketry(execution="async", logger_repo=repo)
 
 
-@app.task(cron=SETTINGS.schedule.cron)
+@app.task(cron(SETTINGS.schedule.cron), name="update_symbol_info")
 async def update_symbol_info():
     await run(
-        types=SETTINGS.parameters.run.types,
+        types="cryptocurrency",#SETTINGS.parameters.run.types,
         query_length=SETTINGS.parameters.run.query_length,
         batch_size=SETTINGS.parameters.run.batch_size,
         storage_type=SETTINGS.storage.type,

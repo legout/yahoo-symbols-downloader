@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 from itertools import product
+from tabnanny import verbose
 from loguru import logger
 from pydala.dataset import ParquetDataset
 from pydala.filesystem import FileSystem
@@ -34,7 +35,8 @@ async def download(
     concurrency: int = 10,
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
-    debug: bool=False
+    debug: bool=False,
+    verbose:bool=False
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -66,7 +68,8 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
-        debug=debug
+        debug=debug,
+        verbose=verbose
     )
 
     symbols = sorted(set(lu_res["symbol"]))
@@ -97,7 +100,8 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
-        debug=debug
+        debug=debug,
+        verbose=verbose
     )
 
     quotes = await get_quotes(
@@ -107,7 +111,8 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         concurrency=concurrency,
         max_retries=max_retries,
-        debug=debug
+        debug=debug,
+        verbose=verbose
     )
 
     df = (
@@ -266,6 +271,7 @@ async def run(
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
     debug: bool = False,
+    verbose:bool = False
 ):
     """
     Asynchronous function that runs a series of queries on a given type of data.
@@ -323,6 +329,7 @@ async def run(
                 max_retries=max_retries,
                 random_delay_multiplier=random_delay_multiplier,
                 debug=debug,
+                verbose=verbose
             )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")
