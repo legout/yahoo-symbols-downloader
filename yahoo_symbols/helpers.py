@@ -42,12 +42,16 @@ def run_sqlite_query(sql: str, storage_path: str):
             os.makedirs(storage_path, exist_ok=True)
             storage_path = os.path.join(storage_path, "yahoo-symbols.sqlite")
 
-    con = sqlite3.connect(f"sqlite3:///{storage_path}")
+    con = sqlite3.connect(storage_path)
 
     # check table exists
     table_name = re.findall(r"(?i)FROM\s+([\w]+\b)", sql)[0]
-    if pl.read_database(f"PRAGMA table_info({table_name})").shape[0] != 0:
-        return pl.read_database(sql, con)
+    if pl.read_database(query=f"PRAGMA table_info({table_name})", connection=con).shape[0] != 0:
+        df= pl.read_database(query=sql, connection=con)
+        con.close()
+        return df
+    else:
+        con.close()
 
 
 def get_new_symbols(

@@ -1,10 +1,7 @@
 import datetime as dt
 import os
 from itertools import product
-from tabnanny import verbose
 from loguru import logger
-from pydala.dataset import ParquetDataset
-from pydala.filesystem import FileSystem
 from pydala.helpers.polars_ext import pl
 from yfin.symbols import validate_async
 from .constants import TYPES, SAMPLES
@@ -131,22 +128,26 @@ async def download(
         df_existing = run_sqlite_query(
             f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
         )
-        delta_df = df.delta(
-            df_existing,
-            subset=[
-                "symbol",
-                "exchange",
-                "type",
-                "short_name",
-                "long_name",
-                "market",
-                "underlying_symbol",
-            ],
-        )
+        if df_existing is not None:
+            delta_df = df.delta(
+                df_existing,
+                subset=[
+                    "symbol",
+                    "exchange",
+                    "type",
+                    "short_name",
+                    "long_name",
+                    "market",
+                    "underlying_symbol",
+                ],
+            )
+        else:
+            delta_df = df
+            
         if delta_df.shape[0]:
             delta_df.write_database(
-                name=type_,
-                connection=f"sqlite3:///{storage_path}",
+                table_name=type_,
+                connection=f"sqlite:///{storage_path}/yahoo-symbols.sqlite",
                 if_exists="append",
             )
         
