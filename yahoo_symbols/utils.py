@@ -93,3 +93,5 @@ class AsyncTyper(Typer):
     def command(self, *args, **kwargs):
         decorator = super().command(*args, **kwargs)
         return partial(self.maybe_run_async, decorator)
+
+
