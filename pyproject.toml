@@ -37,7 +37,7 @@ build-backend = "pdm.backend"
 
 [tool.pdm.build]
 includes = [
-    "yahoo-sambols",
+    "yahoo_symbols",
 ]
 
 [tool.pdm.scripts]
