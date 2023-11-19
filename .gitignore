@@ -163,3 +163,4 @@ cython_debug/
 
 logs/*
 logs/tasks.csv
+symbol-info.db

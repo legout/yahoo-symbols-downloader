@@ -21,8 +21,9 @@ app = AsyncTyper()
 
 @app.command()
 async def download(
-    lookup_queries: str,  # | list[str],
-    type_: str,
+    lookup_queries: str="",  # | list[str],
+    symbols:str="",
+    type_: str="",
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
     s3_profile: str = "default",
@@ -52,24 +53,26 @@ async def download(
     Returns:
         None
     """
+    if lookup_queries != "":
+        
+        if isinstance(lookup_queries, str):
+            lookup_queries = lookup_queries.split(",")
+        
+        logger.info(f"Processing queries: {lookup_queries[0]} - {lookup_queries[-1]}")
+        lu_res = await get_lookup(
+            lookup_query=lookup_queries,
+            type_=type_,
+            random_proxy=random_proxy,
+            random_user_agent=random_user_agent,
+            random_delay_multiplier=random_delay_multiplier,
+            concurrency=concurrency,
+            max_retries=max_retries,
+            debug=debug,
+            verbose=verbose
+        )
 
-    if isinstance(lookup_queries, str):
-        lookup_queries = lookup_queries.split(",")
+        symbols = sorted(set(lu_res["symbol"]))
     
-    logger.info(f"Processing queries: {lookup_queries[0]} - {lookup_queries[-1]}")
-    lu_res = await get_lookup(
-        lookup_query=lookup_queries,
-        type_=type_,
-        random_proxy=random_proxy,
-        random_user_agent=random_user_agent,
-        random_delay_multiplier=random_delay_multiplier,
-        concurrency=concurrency,
-        max_retries=max_retries,
-        debug=debug,
-        verbose=verbose
-    )
-
-    symbols = sorted(set(lu_res["symbol"]))
     new_symbols = get_new_symbols(
         symbols=symbols,
         type_=type_,
