@@ -73,6 +73,8 @@ async def download(
 
         symbols = sorted(set(lu_res["symbol"]))
     
+    symbols = sorted(symbols)
+    
     new_symbols = get_new_symbols(
         symbols=symbols,
         type_=type_,
@@ -193,7 +195,10 @@ async def download(
             on="parquet_dataset",
             use="duckdb",
         )
-    logger.success(f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}")
+    if lookup_queries != "":
+        logger.success(f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}")
+    else: 
+        logger.success(f"Finished processing symbols: {symbols[0]} - {symbols[-1]}")
 
     # return df, ds
 
