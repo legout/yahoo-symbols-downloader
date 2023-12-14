@@ -1,11 +1,11 @@
+from cgitb import lookup
 import datetime as dt
 import os
-from itertools import product
 from loguru import logger
 from pydala.helpers.polars_ext import pl
 from yfin.symbols import validate_async
 from yfin.base import Session
-from .constants import TYPES, SAMPLES
+from .constants import TYPES
 
 from .helpers import (
     get_quote_summary,
@@ -14,6 +14,7 @@ from .helpers import (
     get_new_symbols,
     run_sqlite_query,
     get_parquet_dataset,
+    gen_lookup_queries
 )
 from .utils import AsyncTyper
 
@@ -301,11 +302,7 @@ async def run(
         None
     """
 
-    lookup_queries = [
-        "".join(q)
-        for ql in range(1, query_length + 1)
-        for q in list(product(*[SAMPLES for n in range(ql)]))
-    ]
+    lookup_queries = gen_lookup_queries(query_length)
 
     types = types or TYPES
     if isinstance(types, str):

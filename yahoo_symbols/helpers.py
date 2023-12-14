@@ -3,6 +3,7 @@ from yfin.quotes import quotes_async
 from yfin.symbols import lookup_search_async
 from yfin.base import Session
 import polars as pl
+from itertools import product
 
 from pydala.dataset import ParquetDataset
 from pydala.filesystem import FileSystem
@@ -10,7 +11,15 @@ import os
 import re
 import sqlite3
 from .utils import  repeat_until_completed
+from .constants import TYPES, SAMPLES
 
+def gen_lookup_queries(query_length: int=2, ):
+    lookup_queries = [
+        "".join(q)
+        for ql in range(1, query_length + 1)
+        for q in list(product(*[SAMPLES for n in range(ql)]))
+    ]
+    return lookup_queries
 
 def get_parquet_dataset(
     storage_path: str, storage_type: str, s3_profile: str, s3_bucket: str
