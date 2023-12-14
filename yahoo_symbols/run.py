@@ -4,6 +4,7 @@ from itertools import product
 from loguru import logger
 from pydala.helpers.polars_ext import pl
 from yfin.symbols import validate_async
+from yfin.base import Session
 from .constants import TYPES, SAMPLES
 
 from .helpers import (
@@ -21,9 +22,9 @@ app = AsyncTyper()
 
 @app.command()
 async def download(
-    lookup_queries: str="",  # | list[str],
-    symbols:str="",
-    type_: str="",
+    lookup_queries: str = "",  # | list[str],
+    symbols: str = "",
+    type_: str = "",
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
     s3_profile: str = "default",
@@ -33,8 +34,8 @@ async def download(
     concurrency: int = 10,
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
-    debug: bool=False,
-    verbose:bool=False
+    debug: bool = False,
+    verbose: bool = False,
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -53,28 +54,30 @@ async def download(
     Returns:
         None
     """
+    session = Session(
+        concurrency=concurrency,
+        max_retries=max_retries,
+        random_delay_multiplier=random_delay_multiplier,
+        random_user_agent=random_user_agent,
+        random_proxy=random_proxy,
+    )
     if lookup_queries != "":
-        
         if isinstance(lookup_queries, str):
             lookup_queries = lookup_queries.split(",")
-        
+
         logger.info(f"Processing queries: {lookup_queries[0]} - {lookup_queries[-1]}")
         lu_res = await get_lookup(
             lookup_query=lookup_queries,
             type_=type_,
-            random_proxy=random_proxy,
-            random_user_agent=random_user_agent,
-            random_delay_multiplier=random_delay_multiplier,
-            concurrency=concurrency,
-            max_retries=max_retries,
+            session=session,
+            verbose=verbose,
             debug=debug,
-            verbose=verbose
         )
 
         symbols = sorted(set(lu_res["symbol"]))
-    
+
     symbols = sorted(symbols)
-    
+
     new_symbols = get_new_symbols(
         symbols=symbols,
         type_=type_,
@@ -88,33 +91,25 @@ async def download(
         return
     valid_symbols = await validate_async(new_symbols)
     valid_symbols = sorted(set(valid_symbols.query("valid")["symbol"]))
-    
+
     if len(valid_symbols) == 0:
         logger.success("No new valid symbols found. Finished")
         return
-    
+
     logger.info(f"Found {len(valid_symbols)} new valid symbols")
-    
+
     summary_profile, quote_type = await get_quote_summary(
         symbols=valid_symbols,
-        random_proxy=random_proxy,
-        random_user_agent=random_user_agent,
-        random_delay_multiplier=random_delay_multiplier,
-        concurrency=concurrency,
-        max_retries=max_retries,
+        session=session,
+        verbose=verbose,
         debug=debug,
-        verbose=verbose
     )
 
     quotes = await get_quotes(
         valid_symbols,
-        random_proxy=random_proxy,
-        random_user_agent=random_user_agent,
-        random_delay_multiplier=random_delay_multiplier,
-        concurrency=concurrency,
-        max_retries=max_retries,
+        session=session,
+        verbose=verbose,
         debug=debug,
-        verbose=verbose
     )
 
     df = (
@@ -128,7 +123,7 @@ async def download(
         .with_columns(pl.lit(dt.date.today()).alias("added"))
     )
     logger.info(f"Downloaded {df.shape[0]} new {type_} symbols")
-    
+
     if "sqlite" in str(storage_type):
         df_existing = run_sqlite_query(
             f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
@@ -148,14 +143,14 @@ async def download(
             )
         else:
             delta_df = df
-            
+
         if delta_df.shape[0]:
             delta_df.write_database(
                 table_name=type_,
                 connection=f"sqlite:///{storage_path}/yahoo-symbols.sqlite",
                 if_exists="append",
             )
-        
+
     else:
         if os.path.isfile(storage_path):
             storage_path = os.path.splitext(storage_path)[0]
@@ -196,8 +191,10 @@ async def download(
             use="duckdb",
         )
     if lookup_queries != "":
-        logger.success(f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}")
-    else: 
+        logger.success(
+            f"Finished processing query: {lookup_queries[0]} - {lookup_queries[-1]}"
+        )
+    else:
         logger.success(f"Finished processing symbols: {symbols[0]} - {symbols[-1]}")
 
     # return df, ds
@@ -249,9 +246,7 @@ def export(
         if ds is not None:
             df = pl.from_arrow(ds.filter(f"type={type_}").to_table())
         else:
-            df = run_sqlite_query(
-                f"SELECT * FROM {type_}", storage_path=storage_path
-            )
+            df = run_sqlite_query(f"SELECT * FROM {type_}", storage_path=storage_path)
 
         if to == "csv":
             path_ = os.path.join(os.path.splitext(export_path)[0], f"{type_}.csv")
@@ -264,6 +259,7 @@ def export(
             df.write_json(path_, pretty=True, row_oriented=True)
         logger.info(f"Finished exporting {type_} data")
     logger.success(f"Finished exporting data to {export_path}")
+
 
 @app.command()
 async def run(
@@ -280,7 +276,7 @@ async def run(
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
     debug: bool = False,
-    verbose:bool = False
+    verbose: bool = False,
 ):
     """
     Asynchronous function that runs a series of queries on a given type of data.
@@ -338,7 +334,7 @@ async def run(
                 max_retries=max_retries,
                 random_delay_multiplier=random_delay_multiplier,
                 debug=debug,
-                verbose=verbose
+                verbose=verbose,
             )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")

@@ -4,7 +4,7 @@
 [metadata]
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
-lock_version = "4.4"
+lock_version = "4.4.1"
 content_hash = "sha256:dfa871ead9cdd6c93b49c93c97aaf944392d5e83bc537bea77841589c9de91df"
 
 [[package]]
@@ -1976,7 +1976,7 @@ version = "2.0.23"
 requires_python = ">=3.7"
 summary = "Database Abstraction Library"
 dependencies = [
-    "greenlet!=0.4.17; platform_machine == \"aarch64\" or (platform_machine == \"ppc64le\" or (platform_machine == \"x86_64\" or (platform_machine == \"amd64\" or (platform_machine == \"AMD64\" or (platform_machine == \"win32\" or platform_machine == \"WIN32\")))))",
+    "greenlet!=0.4.17; platform_machine == \"win32\" or platform_machine == \"WIN32\" or platform_machine == \"AMD64\" or platform_machine == \"amd64\" or platform_machine == \"x86_64\" or platform_machine == \"ppc64le\" or platform_machine == \"aarch64\"",
     "typing-extensions>=4.2.0",
 ]
 files = [
@@ -2281,10 +2281,10 @@ files = [
 
 [[package]]
 name = "yfin"
-version = "0.2.5"
+version = "0.2.6"
 requires_python = ">=3.11,<3.13"
 git = "https://github.com/legout/yfin"
-revision = "ed6aefb2981fac5d306270db36bb4170a855e081"
+revision = "1da88b7a8a39787e79c87c8dbd5fbc6bc4308a3f"
 summary = ""
 dependencies = [
     "lxml>=4.9.1",

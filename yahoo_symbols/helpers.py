@@ -1,6 +1,7 @@
 from yfin.quote_summary import quote_summary_async
 from yfin.quotes import quotes_async
 from yfin.symbols import lookup_search_async
+from yfin.base import Session
 import polars as pl
 
 from pydala.dataset import ParquetDataset
@@ -87,6 +88,7 @@ def get_new_symbols(
 async def get_lookup(
     lookup_query: list[str],
     type_: str,
+    session: Session|None = None,
     *args,
     **kwargs,
 ) -> pl.DataFrame:
@@ -106,6 +108,7 @@ async def get_lookup(
     res = await lookup_search_async(
         query=lookup_query,
         type_=type_,
+        session=session,
         *args,
         **kwargs,
     )
@@ -133,7 +136,7 @@ async def get_lookup(
 
 
 async def get_quote_summary(
-    symbols: list[str], *args, **kwargs
+    symbols: list[str], session: Session|None = None, *args, **kwargs
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """
     Retrieves summary profile and quote type information for a list of symbols.
@@ -150,6 +153,7 @@ async def get_quote_summary(
         func=quote_summary_async,
         symbols=symbols,
         modules=["summary_profile", "quote_type"],
+        session=session,
         *args,
         **kwargs,
     )
@@ -204,7 +208,7 @@ async def get_quote_summary(
     return summary_profile, quote_type
 
 
-async def get_quotes(symbols: list[str], *args, **kwargs) -> pl.DataFrame:
+async def get_quotes(symbols: list[str], session: Session|None = None, *args, **kwargs) -> pl.DataFrame:
     """
     Retrieves quotes for a list of symbols from Yahoo Finance.
 
@@ -221,6 +225,7 @@ async def get_quotes(symbols: list[str], *args, **kwargs) -> pl.DataFrame:
         symbols=symbols,
         chunk_size=500,
         fields=["twoHundredDayAverageChangePercent", "currency"],
+        session=session,
         *args,
         **kwargs,
     )
