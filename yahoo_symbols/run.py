@@ -14,7 +14,7 @@ from .helpers import (
     get_new_symbols,
     run_sqlite_query,
     get_parquet_dataset,
-    gen_lookup_queries
+    gen_lookup_queries,
 )
 from .utils import AsyncTyper
 
@@ -25,7 +25,7 @@ app = AsyncTyper()
 async def download(
     lookup_queries: str = "",  # | list[str],
     symbols: str = "",
-    type_: str = "",
+    type_: str = "equity",
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
     s3_profile: str = "default",
@@ -37,6 +37,7 @@ async def download(
     random_delay_multiplier: int = 10,
     debug: bool = False,
     verbose: bool = False,
+    proxies: list[str] | None = None,
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -61,6 +62,7 @@ async def download(
         random_delay_multiplier=random_delay_multiplier,
         random_user_agent=random_user_agent,
         random_proxy=random_proxy,
+        proxies=proxies,
     )
     if lookup_queries != "":
         if isinstance(lookup_queries, str):
@@ -278,6 +280,7 @@ async def run(
     random_delay_multiplier: int = 10,
     debug: bool = False,
     verbose: bool = False,
+    proxies: list[str] | None = None,
 ):
     """
     Asynchronous function that runs a series of queries on a given type of data.
@@ -320,7 +323,7 @@ async def run(
 
             await download(
                 _lookup_queries,
-                type_,
+                type_=type_,
                 storage_path=storage_path,
                 storage_type=storage_type,
                 s3_profile=s3_profile,
@@ -332,6 +335,7 @@ async def run(
                 random_delay_multiplier=random_delay_multiplier,
                 debug=debug,
                 verbose=verbose,
+                proxies=proxies,
             )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")
