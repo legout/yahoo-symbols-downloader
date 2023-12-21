@@ -1399,36 +1399,36 @@ files = [
 
 [[package]]
 name = "polars"
-version = "0.19.19"
+version = "0.20.2"
 requires_python = ">=3.8"
 summary = "Blazingly fast DataFrame library"
 files = [
-    {file = "polars-0.19.19-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:812dbb0cc7027fd41ce6b3eaf100b94828fc082fab026409d48792e3e7014095"},
-    {file = "polars-0.19.19-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:21a334e18c83a259211ca6ec182498f3a89297fde9b8f75021c6881ff4411201"},
-    {file = "polars-0.19.19-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d383fac392b08a6d5830c99f6e735a48e390c1535c8f1e67707fcaab6863ade5"},
-    {file = "polars-0.19.19-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:eec0e72dce84b85c427bbf395d2e181f33e60677695b95ee2e87fed51043bdea"},
-    {file = "polars-0.19.19-cp38-abi3-win_amd64.whl", hash = "sha256:6c9e597efac74f00ef9cdfd9ba8a9128ed24276916bd3d60adc6e604530e4b37"},
-    {file = "polars-0.19.19.tar.gz", hash = "sha256:3e904d197aabf36e37fda263470eaf51ec92fb865cdea4f93947713480199303"},
+    {file = "polars-0.20.2-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:41ed711851745fda2433070d094ca6d21a340940b1641190f7b05c757c11bf1a"},
+    {file = "polars-0.20.2-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:bb49b19e817deb50655b52302c0dbeb099cfe7d2e4c40a6595e7bd94450bf192"},
+    {file = "polars-0.20.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:38d304d532d7bf7f5fb8b878924bf1580ea83aa2f81c7dcd65f8c722fc29e6f9"},
+    {file = "polars-0.20.2-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:a3c4f67573147c2af87c705d4ffd295b865f7e28c88884f7739fb364607e0cd0"},
+    {file = "polars-0.20.2-cp38-abi3-win_amd64.whl", hash = "sha256:7a4e88681e491090435a3c859df7a52d55e6d6ce2891cd404b1668959cfaaebf"},
+    {file = "polars-0.20.2.tar.gz", hash = "sha256:483562f157e6aef6cb4343bf13d11295c8bff55ee62fef8010975a5fc22ff4e0"},
 ]
 
 [[package]]
 name = "polars"
-version = "0.19.19"
+version = "0.20.2"
 extras = ["sqlalchemy"]
 requires_python = ">=3.8"
 summary = "Blazingly fast DataFrame library"
 dependencies = [
     "pandas",
-    "polars==0.19.19",
+    "polars==0.20.2",
     "sqlalchemy",
 ]
 files = [
-    {file = "polars-0.19.19-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:812dbb0cc7027fd41ce6b3eaf100b94828fc082fab026409d48792e3e7014095"},
-    {file = "polars-0.19.19-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:21a334e18c83a259211ca6ec182498f3a89297fde9b8f75021c6881ff4411201"},
-    {file = "polars-0.19.19-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d383fac392b08a6d5830c99f6e735a48e390c1535c8f1e67707fcaab6863ade5"},
-    {file = "polars-0.19.19-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:eec0e72dce84b85c427bbf395d2e181f33e60677695b95ee2e87fed51043bdea"},
-    {file = "polars-0.19.19-cp38-abi3-win_amd64.whl", hash = "sha256:6c9e597efac74f00ef9cdfd9ba8a9128ed24276916bd3d60adc6e604530e4b37"},
-    {file = "polars-0.19.19.tar.gz", hash = "sha256:3e904d197aabf36e37fda263470eaf51ec92fb865cdea4f93947713480199303"},
+    {file = "polars-0.20.2-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:41ed711851745fda2433070d094ca6d21a340940b1641190f7b05c757c11bf1a"},
+    {file = "polars-0.20.2-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:bb49b19e817deb50655b52302c0dbeb099cfe7d2e4c40a6595e7bd94450bf192"},
+    {file = "polars-0.20.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:38d304d532d7bf7f5fb8b878924bf1580ea83aa2f81c7dcd65f8c722fc29e6f9"},
+    {file = "polars-0.20.2-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:a3c4f67573147c2af87c705d4ffd295b865f7e28c88884f7739fb364607e0cd0"},
+    {file = "polars-0.20.2-cp38-abi3-win_amd64.whl", hash = "sha256:7a4e88681e491090435a3c859df7a52d55e6d6ce2891cd404b1668959cfaaebf"},
+    {file = "polars-0.20.2.tar.gz", hash = "sha256:483562f157e6aef6cb4343bf13d11295c8bff55ee62fef8010975a5fc22ff4e0"},
 ]
 
 [[package]]
@@ -1528,7 +1528,7 @@ name = "pydala2"
 version = "0.2.1"
 requires_python = ">=3.10,<3.13"
 git = "https://github.com/legout/pydala2"
-revision = "913129580de406a3832e79fe05ae7b1438a7c813"
+revision = "09363e3b2121c2eb77ac240926e73ce89a1efe3a"
 summary = "poor man´s datalake"
 dependencies = [
     "duckdb>=0.9.1",

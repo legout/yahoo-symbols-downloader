@@ -35,9 +35,10 @@ async def download(
     concurrency: int = 10,
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
-    debug: bool = False,
     verbose: bool = False,
     proxies: list[str] | None = None,
+    debug: bool = False,
+    warnings: bool = False
 ):
     """
     Downloads data from a specified source based on the given lookup queries and type.
@@ -63,6 +64,9 @@ async def download(
         random_user_agent=random_user_agent,
         random_proxy=random_proxy,
         proxies=proxies,
+        verbose=verbose,
+        debug=debug,
+        warnings=warnings
     )
     if lookup_queries != "":
         if isinstance(lookup_queries, str):
@@ -278,9 +282,10 @@ async def run(
     concurrency: int = 10,
     max_retries: int = 5,
     random_delay_multiplier: int = 10,
+    proxies: list[str] | None = None,
     debug: bool = False,
     verbose: bool = False,
-    proxies: list[str] | None = None,
+    warnings: bool = False
 ):
     """
     Asynchronous function that runs a series of queries on a given type of data.
@@ -336,6 +341,7 @@ async def run(
                 debug=debug,
                 verbose=verbose,
                 proxies=proxies,
+                warnings=warnings
             )
             logger.success(f"Batch {n} completed")
         logger.success(f"Completed type: {type_}")
