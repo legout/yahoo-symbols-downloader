@@ -88,7 +88,7 @@ async def run(
     batch_size: int = 1000,
     storage_path: str = "yahoo-symbols",
     storage_type: str = "s3",
-    s3_profile: str = "default",
+    s3_profile: str = None,
     s3_bucket: str = None,
     random_proxy: bool = False,
     random_user_agent: bool = True,
@@ -184,25 +184,6 @@ async def run(
 
     logger.success("Finished")
 
-@app.command()
-def scheduler():
-    settings = load_settings(Path(__file__).parents[2] / "config/settings.toml")
-    run(
-        types=settings.parameters.run.types,
-        query_length=settings.parameters.run.query_length,
-        batch_size=settings.parameters.run.batch_size,
-        storage_path=settings.storage.s3.path,
-        storage_type=settings.storage.type,
-        random_proxy=settings.parameters.download.random_proxy,
-        random_user_agent=settings.parameters.download.random_user_agent,
-        concurrency=settings.parameters.download.concurrency,
-        max_retries=settings.parameters.download.max_retries,
-        random_delay_multiplier=settings.parameters.download.random_delay_multiplier,
-        debug=False,
-        verbose=settings.parameters.download.verbose,
-        warnings=False,
-        log_path=str(Path(__file__).parents[2] / "logs"),
-    )
 
 
 if __name__ == "__main__":
