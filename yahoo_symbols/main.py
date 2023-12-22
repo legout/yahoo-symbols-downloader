@@ -184,9 +184,9 @@ async def run(
 
     logger.success("Finished")
 
-
+@app.command()
 def scheduler():
-    settings = load_settings(Path(__file__).parents[2] / "settings.toml")
+    settings = load_settings(Path(__file__).parents[2] / "config/settings.toml")
     run(
         types=settings.parameters.run.types,
         query_length=settings.parameters.run.query_length,
