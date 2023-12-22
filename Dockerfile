@@ -6,10 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install pdm
+
 WORKDIR /app
+
 COPY yahoo_symbols yahoo_symbols
 COPY pdm.lock pyproject.toml README.md ./
 RUN pdm install --prod --no-lock
+RUN mkdir -p logs
 
 
 ENTRYPOINT [ "pdm", "run", "python", "-m", "yahoo_symbols.main" ]

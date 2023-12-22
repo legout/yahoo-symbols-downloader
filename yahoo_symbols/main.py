@@ -166,7 +166,7 @@ async def run(
                 proxies=proxies,
                 warnings=warnings,
             )
-            save(
+            await save(
                 df,
                 type_=type_,
                 storage_path=storage_path,
