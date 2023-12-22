@@ -5,7 +5,7 @@ import sqlalchemy
 from rocketry import Rocketry
 from rocketry.log import RunRecord
 from rocketry.conds import cron
-from .run import run
+from .main import run
 from .settings import load_settings
 from pydala.filesystem import FileSystem
 import msgspec

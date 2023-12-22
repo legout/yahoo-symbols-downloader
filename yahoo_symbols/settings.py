@@ -40,16 +40,6 @@ class Download(msgspec.Struct):
     verbose: bool
 
 
-class SchedLogging(msgspec.Struct):
-    filename: str | None
-    path: str | None
-    repo: str | None
-
-
-class Schedule(msgspec.Struct):
-    cron: str | None
-    logging: SchedLogging
-
 
 class Parameters(msgspec.Struct):
     download: Download
@@ -59,9 +49,9 @@ class Parameters(msgspec.Struct):
 class Settings(msgspec.Struct):
     storage: Storage
     parameters: Parameters
-    schedule: Schedule
+
 
 
 def load_settings(path: str):
     with open(path) as f:
-        return msgspec.yaml.decode(f.read(), type=Settings)
+        return msgspec.toml.decode(f.read(), type=Settings)

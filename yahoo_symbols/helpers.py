@@ -1,6 +1,6 @@
 from yfin.quote_summary import quote_summary_async
 from yfin.quotes import quotes_async
-from yfin.symbols import lookup_search_async
+from yfin.symbols import lookup_search_async, validate_async
 from yfin.base import Session
 import polars as pl
 from itertools import product
@@ -10,16 +10,21 @@ from pydala.filesystem import FileSystem
 import os
 import re
 import sqlite3
-from .utils import  repeat_until_completed
-from .constants import TYPES, SAMPLES
+from .utils import repeat_until_completed
+from .constants import SAMPLES
+import datetime as dt
 
-def gen_lookup_queries(query_length: int=2, ):
+
+def gen_lookup_queries(
+    query_length: int = 2,
+):
     lookup_queries = [
         "".join(q)
         for ql in range(1, query_length + 1)
         for q in list(product(*[SAMPLES for n in range(ql)]))
     ]
     return lookup_queries
+
 
 def get_parquet_dataset(
     storage_path: str, storage_type: str, s3_profile: str, s3_bucket: str
@@ -56,8 +61,13 @@ def run_sqlite_query(sql: str, storage_path: str):
 
     # check table exists
     table_name = re.findall(r"(?i)FROM\s+([\w]+\b)", sql)[0]
-    if pl.read_database(query=f"PRAGMA table_info({table_name})", connection=con).shape[0] != 0:
-        df= pl.read_database(query=sql, connection=con)
+    if (
+        pl.read_database(
+            query=f"PRAGMA table_info({table_name})", connection=con
+        ).shape[0]
+        != 0
+    ):
+        df = pl.read_database(query=sql, connection=con)
         con.close()
         return df
     else:
@@ -88,7 +98,11 @@ def get_new_symbols(
         )
         return sorted(
             set(symbols)
-            - set(ds.filter(f"type={type_}").to_table(columns=["symbol"])["symbol"].to_pylist())
+            - set(
+                ds.filter(f"type={type_}")
+                .to_table(columns=["symbol"])["symbol"]
+                .to_pylist()
+            )
         )
 
     return symbols
@@ -97,7 +111,7 @@ def get_new_symbols(
 async def get_lookup(
     lookup_query: list[str],
     type_: str,
-    session: Session|None = None,
+    session: Session | None = None,
     *args,
     **kwargs,
 ) -> pl.DataFrame:
@@ -145,7 +159,7 @@ async def get_lookup(
 
 
 async def get_quote_summary(
-    symbols: list[str], session: Session|None = None, *args, **kwargs
+    symbols: list[str], session: Session | None = None, *args, **kwargs
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """
     Retrieves summary profile and quote type information for a list of symbols.
@@ -217,7 +231,9 @@ async def get_quote_summary(
     return summary_profile, quote_type
 
 
-async def get_quotes(symbols: list[str], session: Session|None = None, *args, **kwargs) -> pl.DataFrame:
+async def get_quotes(
+    symbols: list[str], session: Session | None = None, *args, **kwargs
+) -> pl.DataFrame:
     """
     Retrieves quotes for a list of symbols from Yahoo Finance.
 
@@ -273,3 +289,190 @@ async def get_quotes(symbols: list[str], session: Session|None = None, *args, **
         )
 
     return quotes
+
+
+async def download(
+    lookup_queries: str = "",  # | list[str],
+    symbols: str = "",
+    type_: str = "equity",
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = "default",
+    s3_bucket: str = None,
+    random_proxy: bool = False,
+    random_user_agent: bool = True,
+    concurrency: int = 10,
+    max_retries: int = 5,
+    random_delay_multiplier: int = 10,
+    verbose: bool = False,
+    proxies: str = None,
+    debug: bool = False,
+    warnings: bool = False,
+):
+    """
+    Downloads data from a specified source based on the given lookup queries and type.
+
+    Args:
+        lookup_queries (str | list[str]): The lookup queries used to retrieve the data.
+        type_ (str): The type of data to download.
+        storage_path (str, optional): The path where the downloaded data will be stored. Defaults to "yahoo-symbols".
+        storage_type (str, optional): The type of storage to use. Valid options are: "s3", "local" or "sqlite".
+            Defaults to "s3".
+        s3_profile (str, optional): The S3 profile to use if storage_type is "s3". It is neccessary to define
+            your profile in ~/.aws/credentials. Defaults to "default".
+        s3_bucket (str | None, optional): The S3 bucket to use if storage_type is "s3". Defaults to None.
+
+
+    Returns:
+        None
+    """
+    if isinstance(proxies, str):
+        proxies = proxies.split(",")
+
+    session = Session(
+        concurrency=concurrency,
+        max_retries=max_retries,
+        random_delay_multiplier=random_delay_multiplier,
+        random_user_agent=random_user_agent,
+        random_proxy=random_proxy,
+        proxies=proxies,
+        verbose=verbose,
+        debug=debug,
+        warnings=warnings,
+    )
+    if lookup_queries != "":
+        if isinstance(lookup_queries, str):
+            lookup_queries = lookup_queries.split(",")
+
+        lu_res = await get_lookup(
+            lookup_query=lookup_queries,
+            type_=type_,
+            session=session,
+            verbose=verbose,
+            debug=debug,
+        )
+
+        symbols = sorted(set(lu_res["symbol"]))
+
+    symbols = sorted(symbols)
+
+    new_symbols = get_new_symbols(
+        symbols=symbols,
+        type_=type_,
+        storage_path=storage_path,
+        storage_type=storage_type,
+        s3_profile=s3_profile,
+        s3_bucket=s3_bucket,
+    )
+    if len(new_symbols) == 0:
+        return
+    valid_symbols = await validate_async(new_symbols)
+    valid_symbols = sorted(set(valid_symbols.query("valid")["symbol"]))
+
+    if len(valid_symbols) == 0:
+        return
+
+    summary_profile, quote_type = await get_quote_summary(
+        symbols=valid_symbols,
+        session=session,
+        verbose=verbose,
+        debug=debug,
+    )
+
+    quotes = await get_quotes(
+        valid_symbols,
+        session=session,
+        verbose=verbose,
+        debug=debug,
+    )
+
+    df = (
+        (
+            quote_type.join(
+                quotes, on=["symbol", "exchange", "type"], how="outer_coalesce"
+            )
+            .join(summary_profile, on="symbol", how="outer_coalesce")
+            .unique()
+            .sort("symbol")
+        )
+        .filter(pl.col("type") == type_)
+        .with_columns(pl.lit(dt.date.today()).alias("added"))
+    )
+
+    return df
+
+
+async def save(
+    df: pl.DataFrame,
+    type_: str,
+    storage_type: str,
+    storage_path: str,
+    s3_profile: str,
+    s3_bucket: str,
+):
+    if "sqlite" in str(storage_type):
+        df_existing = run_sqlite_query(
+            f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
+        )
+        if df_existing is not None:
+            delta_df = df.delta(
+                df_existing,
+                subset=[
+                    "symbol",
+                    "exchange",
+                    "type",
+                    "short_name",
+                    "long_name",
+                    "market",
+                    "underlying_symbol",
+                ],
+            )
+        else:
+            delta_df = df
+
+        if delta_df.shape[0]:
+            delta_df.write_database(
+                table_name=type_,
+                connection=f"sqlite:///{storage_path}/yahoo-symbols.sqlite",
+                if_exists="append",
+            )
+
+    else:
+        if os.path.isfile(storage_path):
+            storage_path = os.path.splitext(storage_path)[0]
+        ds = get_parquet_dataset(
+            storage_path=storage_path,
+            storage_type=storage_type,
+            s3_profile=s3_profile,
+            s3_bucket=s3_bucket,
+        )
+        ds.write_to_dataset(
+            df=df,
+            mode="delta",
+            num_rows=1_000_000,
+            row_group_size=100_000,
+            compression="zstd",
+            sort_by=["exchange", "symbol"],
+            partitioning_columns=["type", "market", "exchange"],
+            unique=True,
+            delta_subset=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
+            delta_other_df_filter_columns=[
+                "symbol",
+                "exchange",
+                "type",
+                "short_name",
+                "long_name",
+                "market",
+                "underlying_symbol",
+            ],
+            on="parquet_dataset",
+            use="duckdb",
+        )

@@ -165,3 +165,4 @@ logs/*
 logs/tasks.csv
 symbol-info.db
 symbol-info
+dev/*
