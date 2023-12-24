@@ -1,0 +1,10 @@
+version: '3'
+services:
+  app:
+    image: ghcr.io/legout/yahoo-symbols/yahoo-symbols:latest
+    volumes:
+      - ./config/settings.toml:/app/config/settings.toml
+      - logs:/app/logs
+    command: start_scheduler --settings /app/config/settings.toml
+volumes:
+  logs:

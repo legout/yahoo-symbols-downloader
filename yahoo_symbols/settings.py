@@ -7,6 +7,10 @@ class S3Storage(msgspec.Struct):
     bucket: str | None
     partitioning: str | None
 
+    def __post_init__(self):
+        if self.profile == "":
+            self.profile = None
+
 
 class LocalStorage(msgspec.Struct):
     bucket: str | None
@@ -29,6 +33,7 @@ class Run(msgspec.Struct):
     types: list[str]
     query_length: int
     batch_size: int
+    log_path: str | None
 
 
 class Download(msgspec.Struct):
@@ -38,18 +43,27 @@ class Download(msgspec.Struct):
     random_delay_multiplier: int
     concurrency: int
     verbose: bool
+    proxies: list[str] | str | None
 
+    def __post_init__(self):
+        if isinstance(self.proxies, str):
+            with open(self.proxies) as f:
+                self.proxies = f.read().splitlines()
+
+
+class Scheduler(msgspec.Struct):
+    cron: str
 
 
 class Parameters(msgspec.Struct):
     download: Download
     run: Run
+    scheduler: Scheduler
 
 
 class Settings(msgspec.Struct):
     storage: Storage
     parameters: Parameters
-
 
 
 def load_settings(path: str):

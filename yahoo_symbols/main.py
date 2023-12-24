@@ -1,17 +1,21 @@
 import os
+from pathlib import Path
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
 from pydala.helpers.polars_ext import pl
-from yahoo_symbols.settings import load_settings
-from pathlib import Path
-from .constants import TYPES
 
+from .constants import TYPES
 from .helpers import (
     download,
-    save,
-    run_sqlite_query,
-    get_parquet_dataset,
     gen_lookup_queries,
+    get_parquet_dataset,
+    run_sqlite_query,
+    save,
+    settings_to_kwargs,
 )
+from .settings import load_settings
 from .utils import AsyncTyper
 
 app = AsyncTyper()
@@ -83,6 +87,7 @@ def export(
 
 @app.command()
 async def run(
+    settings: str = None,
     types: str = None,
     query_length: int = "2",
     batch_size: int = 1000,
@@ -123,27 +128,60 @@ async def run(
     Returns:
         None
     """
-    if log_path is not None:
-        logger.add(sink=os.path.join(log_path, "log.json"), serialize=True, rotation="1 month")
 
-    lookup_queries = gen_lookup_queries(query_length)
+    if settings is not None:
+        settings = load_settings(settings)
+        kwargs = settings_to_kwargs(settings)
 
-    types = types or TYPES
+    else:
+        kwargs = {
+            "types": types,
+            "query_length": query_length,
+            "batch_size": batch_size,
+            "storage_path": storage_path,
+            "storage_type": storage_type,
+            "s3_profile": s3_profile,
+            "s3_bucket": s3_bucket,
+            "random_proxy": random_proxy,
+            "random_user_agent": random_user_agent,
+            "concurrency": concurrency,
+            "max_retries": max_retries,
+            "random_delay_multiplier": random_delay_multiplier,
+            "proxies": proxies,
+            "debug": debug,
+            "verbose": verbose,
+            "warnings": warnings,
+            "log_path": log_path,
+        }
+
+    if kwargs.get("log_path") is not None:
+        if kwargs.get("log_path")[0] != "/":
+            root_path = Path(__file__).parent.parent.resolve()
+        else:
+            root_path = ""
+        log_path = os.path.join(root_path, kwargs.get("log_path"), "log.json")
+        logger.info(f"Logging to {log_path}")
+
+        logger.add(sink=log_path, serialize=True, rotation="1 month")
+
+    lookup_queries = gen_lookup_queries(kwargs.get("query_length"))
+
+    types = kwargs.get("types") or TYPES
     if isinstance(types, str):
         types = types.split(",")
 
     with logger.contextualize(
         types=types,
-        query_length=query_length,
-        batch_size=batch_size,
-        concurrency=concurrency,
-        random_proxy=random_proxy,
-        random_user_agent=random_user_agent,
+        query_length=kwargs.get("query_length"),
+        batch_size=kwargs.get("batch_size"),
+        concurrency=kwargs.get("concurrency"),
+        random_proxy=kwargs.get("random_proxy"),
+        random_user_agent=kwargs.get("random_user_agent"),
     ):
         logger.info("Starting...")
 
     for type_ in types:
-        for n in range(len(lookup_queries) // batch_size + 1):
+        for n in range(len(lookup_queries) // kwargs.get("batch_size") + 1):
             with logger.contextualize(type=type_, batch=n + 1):
                 logger.info("Processing batch...")
 
@@ -152,27 +190,27 @@ async def run(
             df = await download(
                 _lookup_queries,
                 type_=type_,
-                storage_path=storage_path,
-                storage_type=storage_type,
-                s3_profile=s3_profile,
-                s3_bucket=s3_bucket,
-                concurrency=concurrency,
-                random_proxy=random_proxy,
-                random_user_agent=random_user_agent,
-                max_retries=max_retries,
-                random_delay_multiplier=random_delay_multiplier,
-                debug=debug,
-                verbose=verbose,
-                proxies=proxies,
-                warnings=warnings,
+                storage_path=kwargs.get("storage_path"),
+                storage_type=kwargs.get("storage_type"),
+                s3_profile=kwargs.get("s3_profile"),
+                s3_bucket=kwargs.get("s3_bucket"),
+                concurrency=kwargs.get("concurrency"),
+                random_proxy=kwargs.get("random_proxy"),
+                random_user_agent=kwargs.get("random_user_agent"),
+                max_retries=kwargs.get("max_retries"),
+                random_delay_multiplier=kwargs.get("random_delay_multiplier"),
+                debug=kwargs.get("debug"),
+                verbose=kwargs.get("verbose"),
+                proxies=kwargs.get("proxies"),
+                warnings=kwargs.get("warnings"),
             )
             await save(
                 df,
                 type_=type_,
-                storage_path=storage_path,
-                storage_type=storage_type,
-                s3_profile=s3_profile,
-                s3_bucket=s3_bucket,
+                storage_path=kwargs.get("storage_path"),
+                storage_type=kwargs.get("storage_type"),
+                s3_profile=kwargs.get("s3_profile"),
+                s3_bucket=kwargs.get("s3_bucket"),
             )
             with logger.contextualize(
                 type=type_,
@@ -184,6 +222,64 @@ async def run(
 
     logger.success("Finished")
 
+
+@app.command()
+async def start_scheduler(
+    settings: str = None,
+    cron: str = None,
+    types: str = None,
+    query_length: int = "2",
+    batch_size: int = 1000,
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = None,
+    s3_bucket: str = None,
+    random_proxy: bool = False,
+    random_user_agent: bool = True,
+    concurrency: int = 10,
+    max_retries: int = 5,
+    random_delay_multiplier: int = 10,
+    proxies: str = None,
+    debug: bool = False,
+    verbose: bool = False,
+    warnings: bool = False,
+    log_path: str = None,
+):
+    if settings is not None:
+        settings = load_settings(settings)
+        kwargs = settings_to_kwargs(settings)
+
+    else:
+        kwargs = {
+            "types": types,
+            "query_length": query_length,
+            "batch_size": batch_size,
+            "storage_path": storage_path,
+            "storage_type": storage_type,
+            "s3_profile": s3_profile,
+            "s3_bucket": s3_bucket,
+            "random_proxy": random_proxy,
+            "random_user_agent": random_user_agent,
+            "concurrency": concurrency,
+            "max_retries": max_retries,
+            "random_delay_multiplier": random_delay_multiplier,
+            "proxies": proxies,
+            "debug": debug,
+            "verbose": verbose,
+            "warnings": warnings,
+            "log_path": log_path,
+            "cron": cron,
+        }
+
+    scheduler = AsyncIOScheduler()
+
+    scheduler.add_job(
+        run,
+        trigger=CronTrigger.from_crontab(kwargs.pop("cron")),
+        kwargs=kwargs,
+    )
+    logger.info(f"Starting scheduler with cron {kwargs.get('cron')}")
+    scheduler.start()
 
 
 if __name__ == "__main__":

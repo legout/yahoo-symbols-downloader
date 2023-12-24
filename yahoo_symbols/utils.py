@@ -5,7 +5,8 @@ from functools import partial, wraps
 import asyncer
 import pandas as pd
 import polars as pl
-#import typer
+
+# import typer
 from typer import Typer
 
 
@@ -93,5 +94,3 @@ class AsyncTyper(Typer):
     def command(self, *args, **kwargs):
         decorator = super().command(*args, **kwargs)
         return partial(self.maybe_run_async, decorator)
-
-

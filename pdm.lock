@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4.1"
-content_hash = "sha256:e4ef34ec346e23bcbbd6d8b1964d05b7f23dad3b4936d547518543e771086807"
+content_hash = "sha256:d5a0d79abc59cc876a7dc213a34334a1c8aa19e744aa7029f43acef52042ae06"
 
 [[package]]
 name = "aiobotocore"
@@ -1385,7 +1385,7 @@ files = [
 [[package]]
 name = "parallel-requests"
 version = "0.2.6"
-requires_python = ">=3.10,<3.13"
+requires_python = "<3.13,>=3.10"
 git = "https://github.com/legout/parallel-requests"
 revision = "bcc88d54f00517019e2dc8e5bf492cced28f77dd"
 summary = ""
@@ -1592,7 +1592,7 @@ files = [
 [[package]]
 name = "pydala2"
 version = "0.2.2"
-requires_python = ">=3.10,<3.13"
+requires_python = "<3.13,>=3.10"
 git = "https://github.com/legout/pydala2"
 revision = "921af6dffd3533bfc640a2037cf7d93c1f4ae418"
 summary = "poor man´s datalake"
@@ -1606,26 +1606,6 @@ dependencies = [
     "pyarrow>=12.0.1",
     "s3fs>=2023.6.0",
     "tqdm>=4.65.0",
-]
-
-[[package]]
-name = "pydantic"
-version = "1.10.10"
-requires_python = ">=3.7"
-summary = "Data validation and settings management using python type hints"
-dependencies = [
-    "typing-extensions>=4.2.0",
-]
-files = [
-    {file = "pydantic-1.10.10-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:566a04ba755e8f701b074ffb134ddb4d429f75d5dced3fbd829a527aafe74c71"},
-    {file = "pydantic-1.10.10-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f79db3652ed743309f116ba863dae0c974a41b688242482638b892246b7db21d"},
-    {file = "pydantic-1.10.10-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c62376890b819bebe3c717a9ac841a532988372b7e600e76f75c9f7c128219d5"},
-    {file = "pydantic-1.10.10-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4870f13a4fafd5bc3e93cff3169222534fad867918b188e83ee0496452978437"},
-    {file = "pydantic-1.10.10-cp311-cp311-musllinux_1_1_i686.whl", hash = "sha256:990027e77cda6072a566e433b6962ca3b96b4f3ae8bd54748e9d62a58284d9d7"},
-    {file = "pydantic-1.10.10-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:8c40964596809eb616d94f9c7944511f620a1103d63d5510440ed2908fc410af"},
-    {file = "pydantic-1.10.10-cp311-cp311-win_amd64.whl", hash = "sha256:ea9eebc2ebcba3717e77cdeee3f6203ffc0e78db5f7482c68b1293e8cc156e5e"},
-    {file = "pydantic-1.10.10-py3-none-any.whl", hash = "sha256:a5939ec826f7faec434e2d406ff5e4eaf1716eb1f247d68cd3d0b3612f7b4c8a"},
-    {file = "pydantic-1.10.10.tar.gz", hash = "sha256:3b8d5bd97886f9eb59260594207c9f57dce14a6f869c6ceea90188715d29921a"},
 ]
 
 [[package]]
@@ -1793,20 +1773,6 @@ files = [
 ]
 
 [[package]]
-name = "redbird"
-version = "0.7.1"
-requires_python = ">=3.7"
-summary = "Repository Patterns for Python"
-dependencies = [
-    "pydantic",
-    "typing-extensions",
-]
-files = [
-    {file = "redbird-0.7.1-py3-none-any.whl", hash = "sha256:6a1fe83fa9dfc0c5b9cb256b54376c299c423f2daba7bcbc081a820ff5b3c6c1"},
-    {file = "redbird-0.7.1.tar.gz", hash = "sha256:9ef1098f2a0e68afe40349475018f7694b05bdf92250772cd8d0126f26de58a9"},
-]
-
-[[package]]
 name = "referencing"
 version = "0.32.0"
 requires_python = ">=3.8"
@@ -1871,21 +1837,6 @@ dependencies = [
 files = [
     {file = "rich-13.7.0-py3-none-any.whl", hash = "sha256:6da14c108c4866ee9520bbffa71f6fe3962e193b7da68720583850cd4548e235"},
     {file = "rich-13.7.0.tar.gz", hash = "sha256:5cb5123b5cf9ee70584244246816e9114227e0b98ad9176eede6ad54bf5403fa"},
-]
-
-[[package]]
-name = "rocketry"
-version = "2.5.1"
-requires_python = ">=3.7"
-summary = "Advanced scheduling framework"
-dependencies = [
-    "pydantic",
-    "python-dateutil",
-    "redbird>=0.5.0",
-]
-files = [
-    {file = "rocketry-2.5.1-py3-none-any.whl", hash = "sha256:d8755e909026ba401174218bc0a0958044973244cd07e1405e80f85512440253"},
-    {file = "rocketry-2.5.1.tar.gz", hash = "sha256:11d1fb3d2856c5b2727bb4814c4f2bfbd2803067eebeac872d34a4c7a6756825"},
 ]
 
 [[package]]
@@ -2374,7 +2325,7 @@ files = [
 [[package]]
 name = "yfin"
 version = "0.2.7.1"
-requires_python = ">=3.11,<3.13"
+requires_python = "<3.13,>=3.11"
 git = "https://github.com/legout/yfin"
 revision = "4e826fe4f1144fbe85fec3584285b3265bf689b0"
 summary = ""

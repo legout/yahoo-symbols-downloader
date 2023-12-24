@@ -1,18 +1,21 @@
-from yfin.quote_summary import quote_summary_async
-from yfin.quotes import quotes_async
-from yfin.symbols import lookup_search_async, validate_async
-from yfin.base import Session
-import polars as pl
-from itertools import product
-
-from pydala.dataset import ParquetDataset
-from pydala.filesystem import FileSystem
+import datetime as dt
 import os
 import re
 import sqlite3
-from .utils import repeat_until_completed
+from itertools import product
+from typing import Any
+
+import polars as pl
+from pydala.dataset import ParquetDataset
+from pydala.filesystem import FileSystem
+from yfin.base import Session
+from yfin.quote_summary import quote_summary_async
+from yfin.quotes import quotes_async
+from yfin.symbols import lookup_search_async, validate_async
+
 from .constants import SAMPLES
-import datetime as dt
+from .settings import Settings
+from .utils import repeat_until_completed
 
 
 def gen_lookup_queries(
@@ -476,3 +479,51 @@ async def save(
             on="parquet_dataset",
             use="duckdb",
         )
+
+
+def settings_to_kwargs(
+    settings: Settings,
+) -> dict[str, Any]:
+    """
+    Generate a dictionary of keyword arguments from the given Settings object.
+
+    Args:
+        settings (Settings): The Settings object containing the configuration values.
+
+    Returns:
+        dict[str, Any]: A dictionary of keyword arguments with the following keys:
+            - query_length: The query length value from the settings.run object.
+            - batch_size: The batch size value from the settings.run object.
+            - storage_type: The storage type value from the settings.storage object.
+            - storage_path: The storage path value from the settings.storage.local object.
+            - s3_profile: The S3 profile value from the settings.storage.s3 object.
+            - s3_bucket: The S3 bucket value from the settings.storage.s3 object.
+            - random_proxy: The random proxy value from the settings.download object.
+            - random_user_agent: The random user agent value from the settings.download object.
+            - concurrency: The concurrency value from the settings.download object.
+            - max_retries: The max retries value from the settings.download object.
+            - random_delay_multiplier: The random delay multiplier value from the settings.download object.
+            - proxies: The proxies value from the settings.download object.
+            - debug: The debug value from the settings.download object.
+            - verbose: The verbose value from the settings.download object.
+            - warnings: The warnings value from the settings.download object.
+            - log_path: The log path value from the settings.run object.
+    """
+    return {
+        "query_length": settings.run.query_length,
+        "batch_size": settings.run.batch_size,
+        "storage_type": settings.storage.type,
+        "storage_path": settings.storage.local.path,
+        "s3_profile": settings.storage.s3.profile,
+        "s3_bucket": settings.storage.s3.bucket,
+        "random_proxy": settings.download.random_proxy,
+        "random_user_agent": settings.download.random_user_agent,
+        "concurrency": settings.download.concurrency,
+        "max_retries": settings.download.max_retries,
+        "random_delay_multiplier": settings.download.random_delay_multiplier,
+        "proxies": settings.download.proxies,
+        "debug": settings.download.debug,
+        "verbose": settings.download.verbose,
+        "warnings": settings.download.warnings,
+        "log_path": settings.run.log_path,
+    }
