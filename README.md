@@ -48,7 +48,7 @@ docker run -it --rm \
 
 See below for further [options](#options). 
 
-If you prefer a file-base configuration, create a ``.env` file and a `settings.tmol` and set the neccessary environment variables ([s3 configuration](#2-edit-env-example) and [webshare.io proxy configuration](#configure-webshareio-proxies)) in `.env' and edit the options in `settings.toml`.
+If you prefer a file-base configuration, create a `.env` file and a `settings.tmol` and set the neccessary environment variables ([s3 configuration](#2-edit-env-example) and [webshare.io proxy configuration](#configure-webshareio-proxies)) in `.env` and edit the options in `settings.toml`.
 
 ```shell
 docker run -it --rm \
