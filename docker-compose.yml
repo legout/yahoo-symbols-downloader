@@ -2,9 +2,14 @@ version: '3'
 services:
   app:
     image: ghcr.io/legout/yahoo-symbols/yahoo-symbols:latest
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL}
+      - WEBSHARE_PROXIES_URL=${WEBSHARE_PROXIES_URL}
     volumes:
-      - ./config/settings.toml:/app/config/settings.toml
+      - ./config:/app/config
       - logs:/app/logs
-    command: start_scheduler --settings /app/config/settings.toml
+    command: start-scheduler --settings /app/config/settings.toml
 volumes:
   logs:
