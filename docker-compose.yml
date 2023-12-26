@@ -1,7 +1,7 @@
 version: '3'
 services:
   app:
-    image: yahoo-symbols:latest #ghcr.io/legout/yahoo-symbols/yahoo-symbols:latest
+    image: ghcr.io/legout/yahoo-symbols/yahoo-symbols:latest
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
