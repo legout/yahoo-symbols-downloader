@@ -47,8 +47,11 @@ class Download(msgspec.Struct):
 
     def __post_init__(self):
         if isinstance(self.proxies, str):
-            with open(self.proxies) as f:
-                self.proxies = f.read().splitlines()
+            if self.proxies != "":
+                with open(self.proxies) as f:
+                    self.proxies = f.read().splitlines()
+            else:
+                self.proxies = None
 
 
 class Scheduler(msgspec.Struct):
