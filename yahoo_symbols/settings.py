@@ -1,3 +1,5 @@
+from doctest import debug
+from logging import warn
 import msgspec
 
 
@@ -43,6 +45,8 @@ class Download(msgspec.Struct):
     random_delay_multiplier: int
     concurrency: int
     verbose: bool
+    debug: bool
+    warnings: bool
     proxies: list[str] | str | None
 
     def __post_init__(self):

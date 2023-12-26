@@ -32,6 +32,9 @@ dev = [
     "flask>=3.0.0",
     "flask-apscheduler>=1.13.1",
     "python-dotenv>=1.0.0",
+    "huey>=2.5.0",
+    "greenlet>=3.0.3",
+    "gevent>=23.9.1",
 ]
 
 [build-system]

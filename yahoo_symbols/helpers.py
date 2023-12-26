@@ -413,14 +413,53 @@ async def save(
     s3_profile: str,
     s3_bucket: str,
 ):
-    if "sqlite" in str(storage_type):
-        df_existing = run_sqlite_query(
-            f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
-        )
-        if df_existing is not None:
-            delta_df = df.delta(
-                df_existing,
-                subset=[
+    if df is not None:
+        if "sqlite" in str(storage_type):
+            df_existing = run_sqlite_query(
+                f"SELECT DISTINCT symbol FROM {type_}", storage_path=storage_path
+            )
+            if df_existing is not None:
+                delta_df = df.delta(
+                    df_existing,
+                    subset=[
+                        "symbol",
+                        "exchange",
+                        "type",
+                        "short_name",
+                        "long_name",
+                        "market",
+                        "underlying_symbol",
+                    ],
+                )
+            else:
+                delta_df = df
+
+            if delta_df.shape[0]:
+                delta_df.write_database(
+                    table_name=type_,
+                    connection=f"sqlite:///{storage_path}/yahoo-symbols.sqlite",
+                    if_exists="append",
+                )
+
+        else:
+            if os.path.isfile(storage_path):
+                storage_path = os.path.splitext(storage_path)[0]
+            ds = get_parquet_dataset(
+                storage_path=storage_path,
+                storage_type=storage_type,
+                s3_profile=s3_profile,
+                s3_bucket=s3_bucket,
+            )
+            ds.write_to_dataset(
+                df=df,
+                mode="delta",
+                num_rows=1_000_000,
+                row_group_size=100_000,
+                compression="zstd",
+                sort_by=["exchange", "symbol"],
+                partitioning_columns=["type", "market", "exchange"],
+                unique=True,
+                delta_subset=[
                     "symbol",
                     "exchange",
                     "type",
@@ -429,56 +468,18 @@ async def save(
                     "market",
                     "underlying_symbol",
                 ],
+                delta_other_df_filter_columns=[
+                    "symbol",
+                    "exchange",
+                    "type",
+                    "short_name",
+                    "long_name",
+                    "market",
+                    "underlying_symbol",
+                ],
+                on="parquet_dataset",
+                use="duckdb",
             )
-        else:
-            delta_df = df
-
-        if delta_df.shape[0]:
-            delta_df.write_database(
-                table_name=type_,
-                connection=f"sqlite:///{storage_path}/yahoo-symbols.sqlite",
-                if_exists="append",
-            )
-
-    else:
-        if os.path.isfile(storage_path):
-            storage_path = os.path.splitext(storage_path)[0]
-        ds = get_parquet_dataset(
-            storage_path=storage_path,
-            storage_type=storage_type,
-            s3_profile=s3_profile,
-            s3_bucket=s3_bucket,
-        )
-        ds.write_to_dataset(
-            df=df,
-            mode="delta",
-            num_rows=1_000_000,
-            row_group_size=100_000,
-            compression="zstd",
-            sort_by=["exchange", "symbol"],
-            partitioning_columns=["type", "market", "exchange"],
-            unique=True,
-            delta_subset=[
-                "symbol",
-                "exchange",
-                "type",
-                "short_name",
-                "long_name",
-                "market",
-                "underlying_symbol",
-            ],
-            delta_other_df_filter_columns=[
-                "symbol",
-                "exchange",
-                "type",
-                "short_name",
-                "long_name",
-                "market",
-                "underlying_symbol",
-            ],
-            on="parquet_dataset",
-            use="duckdb",
-        )
 
 
 def settings_to_kwargs(
@@ -492,38 +493,40 @@ def settings_to_kwargs(
 
     Returns:
         dict[str, Any]: A dictionary of keyword arguments with the following keys:
-            - query_length: The query length value from the settings.run object.
-            - batch_size: The batch size value from the settings.run object.
+            - query_length: The query length value from the settings.parameters.run object.
+            - batch_size: The batch size value from the settings.parameters.run object.
             - storage_type: The storage type value from the settings.storage object.
             - storage_path: The storage path value from the settings.storage.local object.
             - s3_profile: The S3 profile value from the settings.storage.s3 object.
             - s3_bucket: The S3 bucket value from the settings.storage.s3 object.
-            - random_proxy: The random proxy value from the settings.download object.
-            - random_user_agent: The random user agent value from the settings.download object.
-            - concurrency: The concurrency value from the settings.download object.
-            - max_retries: The max retries value from the settings.download object.
-            - random_delay_multiplier: The random delay multiplier value from the settings.download object.
-            - proxies: The proxies value from the settings.download object.
-            - debug: The debug value from the settings.download object.
-            - verbose: The verbose value from the settings.download object.
-            - warnings: The warnings value from the settings.download object.
-            - log_path: The log path value from the settings.run object.
+            - random_proxy: The random proxy value from the settings.parameters.download object.
+            - random_user_agent: The random user agent value from the settings.parameters.download object.
+            - concurrency: The concurrency value from the settings.parameters.download object.
+            - max_retries: The max retries value from the settings.parameters.download object.
+            - random_delay_multiplier: The random delay multiplier value from the settings.parameters.download object.
+            - proxies: The proxies value from the settings.parameters.download object.
+            - debug: The debug value from the settings.parameters.download object.
+            - verbose: The verbose value from the settings.parameters.download object.
+            - warnings: The warnings value from the settings.parameters.download object.
+            - log_path: The log path value from the settings.parameters.run object.
     """
     return {
-        "query_length": settings.run.query_length,
-        "batch_size": settings.run.batch_size,
+        "types": settings.parameters.run.types,
+        "query_length": settings.parameters.run.query_length,
+        "batch_size": settings.parameters.run.batch_size,
         "storage_type": settings.storage.type,
         "storage_path": settings.storage.local.path,
         "s3_profile": settings.storage.s3.profile,
         "s3_bucket": settings.storage.s3.bucket,
-        "random_proxy": settings.download.random_proxy,
-        "random_user_agent": settings.download.random_user_agent,
-        "concurrency": settings.download.concurrency,
-        "max_retries": settings.download.max_retries,
-        "random_delay_multiplier": settings.download.random_delay_multiplier,
-        "proxies": settings.download.proxies,
-        "debug": settings.download.debug,
-        "verbose": settings.download.verbose,
-        "warnings": settings.download.warnings,
-        "log_path": settings.run.log_path,
+        "random_proxy": settings.parameters.download.random_proxy,
+        "random_user_agent": settings.parameters.download.random_user_agent,
+        "concurrency": settings.parameters.download.concurrency,
+        "max_retries": settings.parameters.download.max_retries,
+        "random_delay_multiplier": settings.parameters.download.random_delay_multiplier,
+        "proxies": settings.parameters.download.proxies,
+        "debug": settings.parameters.download.debug,
+        "verbose": settings.parameters.download.verbose,
+        "warnings": settings.parameters.download.warnings,
+        "log_path": settings.parameters.run.log_path,
+        "cron": settings.parameters.scheduler.cron,
     }

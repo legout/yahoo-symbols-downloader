@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
+from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
 from pydala.helpers.polars_ext import pl
@@ -16,9 +16,9 @@ from .helpers import (
     settings_to_kwargs,
 )
 from .settings import load_settings
-from .utils import AsyncTyper
-
-app = AsyncTyper()
+#from .utils import AsyncTyper
+from typer import Typer
+app = Typer()
 
 
 @app.command()
@@ -85,8 +85,8 @@ def export(
     logger.success("Finished exporting data to {}".format(export_path))
 
 
-@app.command()
-async def run(
+#@app.command()
+async def run_(
     settings: str = None,
     types: str = None,
     query_length: int = "2",
@@ -178,12 +178,13 @@ async def run(
         random_proxy=kwargs.get("random_proxy"),
         random_user_agent=kwargs.get("random_user_agent"),
     ):
-        logger.info("Starting...")
+        logger.info(f"Starting with query_length: {kwargs.get('query_length')}, batch_size: {kwargs.get('batch_size')}, concurrency: {kwargs.get('concurrency')}, random_proxy: {kwargs.get('random_proxy')}, random_user_agent: {kwargs.get('random_user_agent')}")
 
     for type_ in types:
-        for n in range(len(lookup_queries) // kwargs.get("batch_size") + 1):
+        batches = len(lookup_queries) // kwargs.get("batch_size") + 1
+        for n in range(batches):
             with logger.contextualize(type=type_, batch=n + 1):
-                logger.info("Processing batch...")
+                logger.info(f"Processing type {type_} batch {n + 1}/{batches}")
 
             _lookup_queries = lookup_queries[n * batch_size : (n + 1) * batch_size]
 
@@ -204,27 +205,94 @@ async def run(
                 proxies=kwargs.get("proxies"),
                 warnings=kwargs.get("warnings"),
             )
-            await save(
-                df,
-                type_=type_,
-                storage_path=kwargs.get("storage_path"),
-                storage_type=kwargs.get("storage_type"),
-                s3_profile=kwargs.get("s3_profile"),
-                s3_bucket=kwargs.get("s3_bucket"),
-            )
+            if df is None:
+                logger.info(f"Found {df.shape[0]} new data points.")
+                if df.shape[0] != 0:
+                    await save(
+                        df,
+                        type_=type_,
+                        storage_path=kwargs.get("storage_path"),
+                        storage_type=kwargs.get("storage_type"),
+                        s3_profile=kwargs.get("s3_profile"),
+                        s3_bucket=kwargs.get("s3_bucket"),
+                    )
             with logger.contextualize(
                 type=type_,
                 batch=n + 1,
                 lookup_queries=len(_lookup_queries),
-                new_data=df.shape[0],
+                new_data=df.shape[0] if df is not None else -1,
             ):
-                logger.success("Finished batch")
+                logger.success(f"Finished type {type_} batch {n + 1}/{batches}")
 
     logger.success("Finished")
 
+@app.command()
+def run(
+    settings: str = None,
+    types: str = None,
+    query_length: int = "2",
+    batch_size: int = 1000,
+    storage_path: str = "yahoo-symbols",
+    storage_type: str = "s3",
+    s3_profile: str = None,
+    s3_bucket: str = None,
+    random_proxy: bool = False,
+    random_user_agent: bool = True,
+    concurrency: int = 10,
+    max_retries: int = 5,
+    random_delay_multiplier: int = 10,
+    proxies: str = None,
+    debug: bool = False,
+    verbose: bool = False,
+    warnings: bool = False,
+    log_path: str = None,
+):
+    """
+    Function that runs a series of queries on a given type of data.
+
+    Args:
+        types (str): The type of data to run queries on. Defaults to None.
+        query_length (int): The length of the queries. Defaults to "2".
+        batch_size (int): The number of queries to run in each batch. Defaults to 1000.
+        storage_path (str): The path to store the results. Defaults to "yahoo-symbols".
+        storage_type (str, optional): The type of storage to use. Valid options are: "s3", "local" or "sqlite".
+            Defaults to "s3".
+        s3_profile (str, optional): The S3 profile to use if storage_type is "s3". It is neccessary to define
+            your profile in ~/.aws/credentials. Defaults to "default".
+        s3_bucket (str | None): The S3 bucket to use. Defaults to None.
+        random_proxy (bool): Whether to use a random proxy. Defaults to False.
+        random_user_agent (bool): Whether to use a random user agent. Defaults to True.
+        concurrency (int): The number of queries to run concurrently. Defaults to 25.
+        max_retries (int): The maximum number of retries. Defaults to 3.
+        random_delay_multiplier (int): The multiplier for the random delay. Defaults to 5.
+
+    Returns:
+        None
+    """
+    
+    asyncio.run(run_(
+        settings=settings,
+        types=types,
+        query_length=query_length,
+        batch_size=batch_size,
+        storage_path=storage_path,
+        storage_type=storage_type,
+        s3_profile=s3_profile,
+        s3_bucket=s3_bucket,
+        random_proxy=random_proxy,
+        random_user_agent=random_user_agent,
+        concurrency=concurrency,
+        max_retries=max_retries,
+        random_delay_multiplier=random_delay_multiplier,
+        proxies=proxies,
+        debug=debug,
+        verbose=verbose,
+        warnings=warnings,
+        log_path=log_path,
+    ))
 
 @app.command()
-async def start_scheduler(
+def start_scheduler(
     settings: str = None,
     cron: str = None,
     types: str = None,
@@ -271,15 +339,17 @@ async def start_scheduler(
             "cron": cron,
         }
 
-    scheduler = AsyncIOScheduler()
-
+    scheduler = BlockingScheduler()
+    cron = kwargs.pop("cron")
     scheduler.add_job(
         run,
-        trigger=CronTrigger.from_crontab(kwargs.pop("cron")),
+        trigger=CronTrigger.from_crontab(cron),
         kwargs=kwargs,
     )
-    logger.info(f"Starting scheduler with cron {kwargs.get('cron')}")
+    logger.info(f"Starting scheduler with cron {cron}")
     scheduler.start()
+    
+    #return scheduler
 
 
 if __name__ == "__main__":
