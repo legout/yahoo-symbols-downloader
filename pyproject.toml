@@ -1,6 +1,6 @@
 [project]
-name = "yahoo-symbols"
-version = "0.1.8"
+name = "yahoo-symbols-downloader"
+version = "0.2"
 description = "Balzing fast yahoo symbol downloader."
 authors = [
     {name = "Volker Lorrmann", email = "volker.lorrmann@gmail.com"},
@@ -43,9 +43,9 @@ build-backend = "pdm.backend"
 
 [tool.pdm.build]
 includes = [
-    "yahoo_symbols",
+    "yahoo_symbols_downloader",
 ]
 
 [tool.pdm.scripts]
-scheduler = "python -m yahoo_symbols.main start_scheduler"
-downloader = "python -m yahoo_symbols.main run"
+scheduler = "python -m yahoo_symbols_downloader.main start_scheduler"
+downloader = "python -m yahoo_symbols_downloader.main run"
