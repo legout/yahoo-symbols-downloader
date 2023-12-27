@@ -1,4 +1,8 @@
-# Yahoo Symbols Downloader
+<h1 align="center">Yahoo Symbols Downloader</h1>
+
+<p align="center">
+  <img src="logo.png" alt="Alternativer Text" width="256"/>
+</p>
 
 This is a blazing fast python script that downloads *almost all* yahoo symbols. 
 
