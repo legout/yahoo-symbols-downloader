@@ -9,10 +9,10 @@ RUN pip install pdm
 
 WORKDIR /app
 
-COPY yahoo_symbols yahoo_symbols
+COPY yahoo_symbols_downloader yahoo_symbols_downloader
 COPY pdm.lock pyproject.toml README.md ./
 RUN pdm install --prod --no-lock
 RUN mkdir -p logs
 
 
-ENTRYPOINT [ "pdm", "run", "python", "-m", "yahoo_symbols.main" ]
+ENTRYPOINT [ "pdm", "run", "python", "-m", "yahoo_symbols_downloader.main" ]

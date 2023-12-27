@@ -58,7 +58,7 @@ If you prefer a file-base configuration, create a `.env` file and a `settings.tm
 docker run -it --rm \
        -v path/to/settings.toml:/app/config/settings.toml \
        --env-file path/to/.env \
-       ghcr.io/legout/yahoo-symbols/yahoo-symbols:latest \
+       ghcr.io/legout/yahoo-symbols-downloader/yahoo-symbols-downloader:latest \
        start-scheduler # or run if you want to run the download only once \ 
        --settings /app/config/settings.toml
 ```
@@ -67,15 +67,15 @@ docker run -it --rm \
 
 ## Using pdm
 ```shell
-git clone https://github.com/legout/yahoo-symbols
-cd yahoo-symbols
+git clone https://github.com/legout/yahoo-symbols-downloader
+cd yahoo-symbols-downloader
 pdm install --prod
 ```
 
 ## Using pip 
 **Note** Do not use this, if you want to schedule the download
 ```shell
-pip install git+https://github.com/legout/yahoo-symbols.git
+pip install git+https://github.com/legout/yahoo-symbols-downloader.git
 ```
 
 # Usage
@@ -84,7 +84,7 @@ pip install git+https://github.com/legout/yahoo-symbols.git
 
 ### 1.1. Set options manually
 ```shell
-python -m yahoo_symbols.main run --query-length=2 --types=equity,etf
+python -m yahoo_symbols_downloader.main run --query-length=2 --types=equity,etf
 ``` 
 or 
 ```shell
@@ -177,7 +177,7 @@ path = "yfin-db/symbol-info.db"
 and run
 
 ```shell
-python -m yahoo_symbols.main run --settings path/to/config/settings.toml
+python -m yahoo_symbols_downloader.main run --settings path/to/config/settings.toml
 ``` 
 or 
 ```shell
@@ -205,7 +205,7 @@ pdm run downloader -settings path/to/config/settings.toml
 ## 2. Schedule the script run
 ### 2.1. Configure options manually
 ```shell
-python -m yahoo_symbols.main start_scheduler --query-length=2 --types=equity,etf
+python -m yahoo_symbols_downloader.main start_scheduler --query-length=2 --types=equity,etf
 ``` 
 or 
 ```shell
@@ -215,7 +215,7 @@ pdm run scheduler --query-length=2 --types=equity,etf
 ### 2.2. File-based configuration
 
 ```shell
-python -m yahoo_symbols.main start_scheduler --settings path/to/config/settings.toml
+python -m yahoo_symbols_downloader.main start_scheduler --settings path/to/config/settings.toml
 ``` 
 or 
 ```shell
