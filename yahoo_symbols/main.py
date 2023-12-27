@@ -205,7 +205,7 @@ async def run_(
                 proxies=kwargs.get("proxies"),
                 warnings=kwargs.get("warnings"),
             )
-            if df is None:
+            if df is not None:
                 logger.info(f"Found {df.shape[0]} new data points.")
                 if df.shape[0] != 0:
                     await save(
