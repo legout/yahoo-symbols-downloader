@@ -281,7 +281,7 @@ version = "23.12.0"
 requires_python = ">=3.8"
 summary = "The uncompromising code formatter."
 dependencies = [
-    "aiohttp>=3.7.4; sys_platform != \"win32\" or implementation_name != \"pypy\" and extra == \"d\"",
+    "aiohttp>=3.7.4; sys_platform != \"win32\" or implementation_name != \"pypy\"",
     "click>=8.0.0",
     "mypy-extensions>=0.4.3",
     "packaging>=22.0",
@@ -1426,7 +1426,7 @@ files = [
 [[package]]
 name = "parallel-requests"
 version = "0.2.6"
-requires_python = "<3.13,>=3.10"
+requires_python = ">=3.10,<3.13"
 git = "https://github.com/legout/parallel-requests"
 revision = "bcc88d54f00517019e2dc8e5bf492cced28f77dd"
 summary = ""
@@ -1632,10 +1632,10 @@ files = [
 
 [[package]]
 name = "pydala2"
-version = "0.2.2"
-requires_python = "<3.13,>=3.10"
+version = "0.2.4"
+requires_python = ">=3.10,<3.13"
 git = "https://github.com/legout/pydala2"
-revision = "921af6dffd3533bfc640a2037cf7d93c1f4ae418"
+revision = "a9c9aea5025980f0fb13da7a19496187bc2e3016"
 summary = "poor man´s datalake"
 dependencies = [
     "duckdb>=0.9.1",
@@ -1643,7 +1643,6 @@ dependencies = [
     "msgspec>=0.18.4",
     "pandas>=2.0.3",
     "pendulum>=2.1.2",
-    "polars>=0.18.15",
     "pyarrow>=12.0.1",
     "s3fs>=2023.6.0",
     "tqdm>=4.65.0",
@@ -2376,7 +2375,7 @@ files = [
 [[package]]
 name = "yfin"
 version = "0.2.7.1"
-requires_python = "<3.13,>=3.11"
+requires_python = ">=3.11,<3.13"
 git = "https://github.com/legout/yfin"
 revision = "4e826fe4f1144fbe85fec3584285b3265bf689b0"
 summary = ""

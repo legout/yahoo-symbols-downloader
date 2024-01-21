@@ -16,8 +16,10 @@ from .helpers import (
     settings_to_kwargs,
 )
 from .settings import load_settings
-#from .utils import AsyncTyper
+
+# from .utils import AsyncTyper
 from typer import Typer
+
 app = Typer()
 
 
@@ -66,7 +68,7 @@ def export(
         logger.info("Exporting data of type {}".format(type_))
 
         if ds is not None:
-            df = pl.from_arrow(ds.filter(f"type={type_}").to_table())
+            df = ds.filter(f"type={type_}").pl(lazy=False)
         else:
             df = run_sqlite_query(f"SELECT * FROM {type_}", storage_path=storage_path)
 
@@ -85,7 +87,7 @@ def export(
     logger.success("Finished exporting data to {}".format(export_path))
 
 
-#@app.command()
+# @app.command()
 async def run_(
     settings: str = None,
     types: str = None,
@@ -178,7 +180,9 @@ async def run_(
         random_proxy=kwargs.get("random_proxy"),
         random_user_agent=kwargs.get("random_user_agent"),
     ):
-        logger.info(f"Starting with query_length: {kwargs.get('query_length')}, batch_size: {kwargs.get('batch_size')}, concurrency: {kwargs.get('concurrency')}, random_proxy: {kwargs.get('random_proxy')}, random_user_agent: {kwargs.get('random_user_agent')}")
+        logger.info(
+            f"Starting with query_length: {kwargs.get('query_length')}, batch_size: {kwargs.get('batch_size')}, concurrency: {kwargs.get('concurrency')}, random_proxy: {kwargs.get('random_proxy')}, random_user_agent: {kwargs.get('random_user_agent')}"
+        )
 
     for type_ in types:
         batches = len(lookup_queries) // kwargs.get("batch_size") + 1
@@ -226,6 +230,7 @@ async def run_(
 
     logger.success("Finished")
 
+
 @app.command()
 def run(
     settings: str = None,
@@ -269,27 +274,30 @@ def run(
     Returns:
         None
     """
-    
-    asyncio.run(run_(
-        settings=settings,
-        types=types,
-        query_length=query_length,
-        batch_size=batch_size,
-        storage_path=storage_path,
-        storage_type=storage_type,
-        s3_profile=s3_profile,
-        s3_bucket=s3_bucket,
-        random_proxy=random_proxy,
-        random_user_agent=random_user_agent,
-        concurrency=concurrency,
-        max_retries=max_retries,
-        random_delay_multiplier=random_delay_multiplier,
-        proxies=proxies,
-        debug=debug,
-        verbose=verbose,
-        warnings=warnings,
-        log_path=log_path,
-    ))
+
+    asyncio.run(
+        run_(
+            settings=settings,
+            types=types,
+            query_length=query_length,
+            batch_size=batch_size,
+            storage_path=storage_path,
+            storage_type=storage_type,
+            s3_profile=s3_profile,
+            s3_bucket=s3_bucket,
+            random_proxy=random_proxy,
+            random_user_agent=random_user_agent,
+            concurrency=concurrency,
+            max_retries=max_retries,
+            random_delay_multiplier=random_delay_multiplier,
+            proxies=proxies,
+            debug=debug,
+            verbose=verbose,
+            warnings=warnings,
+            log_path=log_path,
+        )
+    )
+
 
 @app.command()
 def start_scheduler(
@@ -348,8 +356,8 @@ def start_scheduler(
     )
     logger.info(f"Starting scheduler with cron {cron}")
     scheduler.start()
-    
-    #return scheduler
+
+    # return scheduler
 
 
 if __name__ == "__main__":

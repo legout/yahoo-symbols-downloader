@@ -1,7 +1,7 @@
 [parameters.download]
-concurrency = 25
-max_retries = 5
-random_delay_multiplier = 2
+concurrency = 10
+max_retries = 0
+random_delay_multiplier = 0
 random_proxy = true
 random_user_agent = true
 verbose = true
@@ -11,7 +11,7 @@ proxies = ""
 
 [parameters.run]
 batch_size = 1_000
-query_length = 2
+query_length = 1
 types = [
   "equity",
   "etf",

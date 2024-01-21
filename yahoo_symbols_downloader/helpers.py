@@ -4,6 +4,7 @@ import re
 import sqlite3
 from itertools import product
 from typing import Any
+from random import shuffle
 
 import polars as pl
 from pydala.dataset import ParquetDataset
@@ -26,6 +27,7 @@ def gen_lookup_queries(
         for ql in range(1, query_length + 1)
         for q in list(product(*[SAMPLES for n in range(ql)]))
     ]
+    shuffle(lookup_queries)
     return lookup_queries
 
 
@@ -103,8 +105,10 @@ def get_new_symbols(
             set(symbols)
             - set(
                 ds.filter(f"type={type_}")
-                .to_table(columns=["symbol"])["symbol"]
-                .to_pylist()
+                .pl()
+                .select("symbol")
+                .collect()["symbol"]
+                .to_list()
             )
         )
 
