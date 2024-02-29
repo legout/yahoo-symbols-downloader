@@ -1,40 +1,38 @@
 [project]
 name = "yahoo-symbols-downloader"
-version = "0.2"
+version = "0.3"
 description = "Balzing fast yahoo symbol downloader."
-authors = [
-    {name = "Volker Lorrmann", email = "volker.lorrmann@gmail.com"},
-]
+authors = [{ name = "Volker Lorrmann", email = "volker.lorrmann@gmail.com" }]
 dependencies = [
-    "pydala2 @ git+https://github.com/legout/pydala2",
-    "msgspec>=0.18.4",
-    "typer>=0.9.0",
-    "rich>=13.6.0",
-    #"rocketry>=2.5.1",
-    "polars[sqlalchemy]>=0.19.12",
-    "yfin @ git+https://github.com/legout/yfin",
-    #"pydantic==1.10.10",
-    "parallel-requests @ git+https://github.com/legout/parallel-requests",
-    "apscheduler>=3.10.4",
+  "pydala2 @ git+https://github.com/legout/pydala2",
+  "msgspec>=0.18.4",
+  "typer>=0.9.0",
+  "rich>=13.6.0",
+  #"rocketry>=2.5.1",
+  "polars[sqlalchemy]>=0.19.12",
+  "yfin @ git+https://github.com/legout/yfin",
+  #"pydantic==1.10.10",
+  "parallel-requests @ git+https://github.com/legout/parallel-requests",
+  "apscheduler>=3.10.4",
 ]
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 
 [project.optional-dependencies]
 dev = [
-    "jupyterlab>=4.0.7",
-    "black>=23.9.1",
-    "isort>=5.12.0",
-    "ipython>=8.16.1",
-    "ruff>=0.1.3",
-    "tabulate>=0.9.0",
-    "flask>=3.0.0",
-    "flask-apscheduler>=1.13.1",
-    "python-dotenv>=1.0.0",
-    "huey>=2.5.0",
-    "greenlet>=3.0.3",
-    "gevent>=23.9.1",
+  "jupyterlab>=4.0.7",
+  "black>=23.9.1",
+  "isort>=5.12.0",
+  "ipython>=8.16.1",
+  "ruff>=0.1.3",
+  "tabulate>=0.9.0",
+  "flask>=3.0.0",
+  "flask-apscheduler>=1.13.1",
+  "python-dotenv>=1.0.0",
+  "huey>=2.5.0",
+  "greenlet>=3.0.3",
+  "gevent>=23.9.1",
 ]
 
 [build-system]
@@ -42,9 +40,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm.build]
-includes = [
-    "yahoo_symbols_downloader",
-]
+includes = ["yahoo_symbols_downloader"]
 
 [tool.pdm.scripts]
 scheduler = "python -m yahoo_symbols_downloader.main start_scheduler"
