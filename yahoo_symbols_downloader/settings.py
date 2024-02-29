@@ -1,5 +1,3 @@
-from doctest import debug
-from logging import warn
 import msgspec
 
 
@@ -59,7 +57,7 @@ class Download(msgspec.Struct):
 
 
 class Scheduler(msgspec.Struct):
-    cron: str
+    cron: str | list[str]
 
 
 class Parameters(msgspec.Struct):

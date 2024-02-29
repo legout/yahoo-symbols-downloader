@@ -24,7 +24,7 @@ types = [
 log_path = "logs"
 
 [parameters.scheduler]
-cron = "47 3 * * 1-5"
+cron = ["47 3 * * MON-FRI", "47 1 * * SUN"]
 
 [storage]
 type = "s3"
