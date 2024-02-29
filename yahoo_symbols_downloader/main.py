@@ -332,7 +332,7 @@ def start_scheduler(
             "query_length": query_length,
             "batch_size": batch_size,
             "storage_path": storage_path,
-            "storage_type": storage_type,  
+            "storage_type": storage_type,
             "s3_profile": s3_profile,
             "s3_bucket": s3_bucket,
             "random_proxy": random_proxy,
@@ -351,8 +351,8 @@ def start_scheduler(
     scheduler = BlockingScheduler()
     crons = kwargs.pop("cron")
     for n, cron in enumerate(crons):
-        kwargs["query_length"] = kwargs["query_length"]+n
-        kwargs"concurrency" = kwargs["concurrency"]/(n+1)
+        kwargs["query_length"] = kwargs["query_length"] + n
+        kwargs["concurrency"] = kwargs["concurrency"] / (n + 1)
         scheduler.add_job(
             run,
             trigger=CronTrigger.from_crontab(cron),
